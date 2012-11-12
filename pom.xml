@@ -8,13 +8,23 @@
 	</parent>
 
 	<groupId>org.cloudsmith.geppetto</groupId>
-	<artifactId>puppetforge-plugin</artifactId>
+	<artifactId>puppetforge</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>hpi</packaging>
+	<description>Validates puppet modules and then publishes them to the Puppet Forge</description>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.net.id>thhal</java.net.id>
 	</properties>
+
+	<developers>
+		<developer>
+			<id>thallgren</id>
+			<name>Thomas Hallgren</name>
+			<email>thomas@tada.se</email>
+		</developer>
+	</developers>
 
 	<dependencies>
 		<dependency>

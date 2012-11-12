@@ -11,16 +11,17 @@
  */
 package org.cloudsmith.geppetto.forge.jenkins;
 
-import static org.cloudsmith.geppetto.forge.impl.MetadataImpl.DEFAULT_EXCLUDES_PATTERN;
-import hudson.FilePath.FileCallable;
 import hudson.remoting.VirtualChannel;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -34,7 +35,6 @@ import org.cloudsmith.geppetto.common.os.StreamUtil.OpenBAStream;
 import org.cloudsmith.geppetto.forge.ForgeFactory;
 import org.cloudsmith.geppetto.forge.util.JsonUtils;
 import org.cloudsmith.geppetto.forge.util.TarUtils;
-import org.cloudsmith.geppetto.forge.v2.Forge;
 import org.cloudsmith.geppetto.forge.v2.MetadataRepository;
 import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
 import org.cloudsmith.geppetto.forge.v2.model.Dependency;
@@ -42,48 +42,32 @@ import org.cloudsmith.geppetto.forge.v2.model.Metadata;
 import org.cloudsmith.geppetto.forge.v2.model.Module;
 import org.cloudsmith.geppetto.forge.v2.model.Release;
 import org.cloudsmith.geppetto.forge.v2.service.ReleaseService;
+import org.cloudsmith.geppetto.pp.dsl.PPStandaloneSetup;
+import org.cloudsmith.geppetto.pp.dsl.target.PptpResourceUtil;
 import org.cloudsmith.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.BasicDiagnostic;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.jgit.lib.ConfigConstants;
-import org.eclipse.jgit.lib.StoredConfig;
-import org.eclipse.jgit.storage.file.FileRepository;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import com.cloudsmith.hammer.puppet.validation.DetailedDiagnosticData;
-import com.cloudsmith.hammer.puppet.validation.DiagnosticData;
 import com.cloudsmith.hammer.puppet.validation.FileType;
 import com.cloudsmith.hammer.puppet.validation.GraphHrefType;
 import com.cloudsmith.hammer.puppet.validation.ModuleDependencyGraphOptions;
 import com.cloudsmith.hammer.puppet.validation.ValidationFactory;
 import com.cloudsmith.hammer.puppet.validation.ValidationOptions;
 import com.cloudsmith.hammer.puppet.validation.ValidationServiceDiagnosticCode;
+import com.cloudsmith.hammer.puppet.validation.graphs.SVGProducer;
 import com.cloudsmith.hammer.puppet.validation.runner.IEncodingProvider;
-import com.cloudsmith.hammer.puppet.validation.runner.PPDiagnosticsRunner;
 import com.google.gson.Gson;
 
-public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>> {
+public class ForgeValidator extends ForgeCallable<byte[]> {
 	private static final long serialVersionUID = -2352185785743765350L;
-
-	private ForgePreferences forgePreferences;
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
 
-	private static Diagnostic convertValidationDiagnostic(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
-
-		Diagnostic diagnostic = new Diagnostic();
-		diagnostic.setSeverity(getSeverity(validationDiagnostic));
-		diagnostic.setType(getDiagnosticType(validationDiagnostic));
-		diagnostic.setMessage(validationDiagnostic.getMessage());
-		diagnostic.setSource(validationDiagnostic.getSource());
-
-		DiagnosticData data = (DiagnosticData) validationDiagnostic.getData().get(0);
-		if(data instanceof DetailedDiagnosticData)
-			diagnostic.setLocationLabel(locationLabel((DetailedDiagnosticData) data));
-
-		return diagnostic;
-	}
+	private static final Pattern GITHUB_REPO_URL_PATTERN = Pattern.compile("github.com[/:]([^/\\s]+)/([^/\\s]+)\\.git$");
 
 	private static DiagnosticType getDiagnosticType(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
 		DiagnosticType type;
@@ -161,23 +145,40 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 		return builder.toString();
 	}
 
-	private transient Forge forge;
-
-	private transient File repositoryDir;
-
-	private transient FileRepository localRepository;
-
-	private static final Pattern GITHUB_REPO_URL_PATTERN = Pattern.compile("github.com[/:]([^/\\s]+)/([^/\\s]+)\\.git$");
+	private transient String repositoryHrefPrefix;
 
 	public ForgeValidator() {
 	}
 
-	public ForgeValidator(ForgePreferences forgePreferences) {
-		this.forgePreferences = forgePreferences;
+	public ForgeValidator(ForgePreferences forgePreferences, String repositoryURL, String branchName) {
+		super(forgePreferences, repositoryURL, branchName);
+	}
+
+	private Diagnostic convertValidationDiagnostic(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
+
+		Object dataObj = validationDiagnostic.getData().get(0);
+		String resourcePath = null;
+		String locationLabel = null;
+		if(dataObj instanceof DetailedDiagnosticData) {
+			DetailedDiagnosticData details = (DetailedDiagnosticData) dataObj;
+			resourcePath = details.getFile().getPath();
+			if(resourcePath != null && resourcePath.startsWith(IMPORTED_MODULES_ROOT))
+				return null;
+			locationLabel = locationLabel(details);
+		}
+
+		Diagnostic diagnostic = new Diagnostic();
+		diagnostic.setSeverity(getSeverity(validationDiagnostic));
+		diagnostic.setType(getDiagnosticType(validationDiagnostic));
+		diagnostic.setMessage(validationDiagnostic.getMessage());
+		diagnostic.setSource(getRepositoryHrefPrefix());
+		diagnostic.setResourcePath(resourcePath);
+		diagnostic.setLocationLabel(locationLabel);
+		return diagnostic;
 	}
 
 	private File downloadAndInstall(ReleaseService releaseService, File modulesRoot,
-			ResultWithDiagnostic<String> result, Release release) throws IOException {
+			ResultWithDiagnostic<byte[]> result, Release release) throws IOException {
 		OpenBAStream content = new OpenBAStream();
 		Module module = release.getModule();
 		releaseService.download(module.getOwner().getUsername(), module.getName(), release.getVersion(), content);
@@ -186,78 +187,22 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 		return moduleDir;
 	}
 
-	private boolean findModuleFiles(File[] files, List<File> moduleFiles) throws InterruptedException, IOException {
-		if(files != null) {
-			int idx = files.length;
-			while(--idx >= 0)
-				if("Modulefile".equals(files[idx].getName()))
-					return true;
-
-			idx = files.length;
-			while(--idx >= 0) {
-				File file = files[idx];
-				if(DEFAULT_EXCLUDES_PATTERN.matcher(file.getName()).matches())
-					continue;
-
-				if(findModuleFiles(file.listFiles(), moduleFiles))
-					moduleFiles.add(file);
-			}
-		}
-		return false;
-	}
-
-	private List<File> findModuleRoots() throws InterruptedException, IOException {
-		// Scan for valid directories containing "Modulefile" files.
-
-		List<File> moduleRoots = new ArrayList<File>();
-		if(findModuleFiles(repositoryDir.listFiles(), moduleRoots))
-			// The repository is a module in itself
-			moduleRoots.add(repositoryDir);
-		return moduleRoots;
-	}
-
 	private ModuleDependencyGraphOptions getDependencyGraphOptions(OutputStream dotStream, List<File> moduleLocations)
 			throws IOException {
 		// Assume service API
 		ModuleDependencyGraphOptions graphOptions = ValidationFactory.eINSTANCE.createModuleDependencyGraphOptions();
 
-		String repositoryURL = getRemoteURL();
-		if(repositoryURL != null) {
-			Matcher m = GITHUB_REPO_URL_PATTERN.matcher(repositoryURL);
-			if(m.find()) {
-				graphOptions.setGraphHrefPrefix(String.format(
-					"https://github.com/%s/%s/blob/%s", m.group(1), m.group(2), getLocalRepository().getBranch()));
-			}
+		String hrefPrefix = getRepositoryHrefPrefix();
+		if(hrefPrefix != null) {
+			graphOptions.setGraphHrefPrefix(hrefPrefix);
+			graphOptions.setGraphHrefType(GraphHrefType.GITHUB);
 		}
-		graphOptions.setGraphHrefType(GraphHrefType.GITHUB);
 
 		graphOptions.setDotStream(dotStream);
 		graphOptions.setModulesToGraph(moduleLocations.toArray(new File[moduleLocations.size()]));
 
 		graphOptions.setTitle("");
 		return graphOptions;
-	}
-
-	private Forge getForge() {
-		if(forge == null)
-			forge = Forge.getInstance(forgePreferences);
-		return forge;
-	}
-
-	private FileRepository getLocalRepository() throws IOException {
-		if(localRepository == null) {
-			File guessGitDir = new File(repositoryDir, ".git");
-			boolean bare = !guessGitDir.isDirectory();
-			FileRepositoryBuilder bld = new FileRepositoryBuilder();
-			if(bare) {
-				bld.setBare();
-				bld.setGitDir(repositoryDir);
-			}
-			else
-				bld.setWorkTree(repositoryDir);
-			localRepository = bld.setup().build();
-		}
-		return localRepository;
 	}
 
 	private Metadata getModuleMetadata(File moduleDirectory) throws IOException {
@@ -273,21 +218,27 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 		return gson.fromJson(writer.toString(), Metadata.class);
 	}
 
-	/**
-	 * Obtains the remote URL that is referenced by the given <code>branchName</code>
-	 * 
-	 * @return The URL or <code>null</code> if it hasn't been configured
-	 *         for the given branch.
-	 */
-	private String getRemoteURL() throws IOException {
-		FileRepository repository = getLocalRepository();
-		StoredConfig repoConfig = repository.getConfig();
-		String configuredRemote = repoConfig.getString(
-			ConfigConstants.CONFIG_BRANCH_SECTION, repository.getBranch(), ConfigConstants.CONFIG_KEY_REMOTE);
-		return configuredRemote == null
+	private String getRelativePath(File file) {
+		IPath rootPath = Path.fromOSString(getRepositoryDir().getAbsolutePath());
+		IPath path = Path.fromOSString(file.getAbsolutePath());
+		IPath relative = path.makeRelativeTo(rootPath);
+		return relative.toPortableString();
+	}
+
+	private synchronized String getRepositoryHrefPrefix() {
+		if(repositoryHrefPrefix == null) {
+			String repositoryURL = getRepositoryURL();
+			Matcher m = GITHUB_REPO_URL_PATTERN.matcher(repositoryURL);
+			if(m.find()) {
+				repositoryHrefPrefix = String.format(
+					"https://github.com/%s/%s/blob/%s", m.group(1), m.group(2), getBranchName());
+				return repositoryHrefPrefix;
+			}
+			repositoryHrefPrefix = "";
+		}
+		return repositoryHrefPrefix.length() == 0
 				? null
-				: repoConfig.getString(
-					ConfigConstants.CONFIG_REMOTE_SECTION, configuredRemote, ConfigConstants.CONFIG_KEY_URL);
+				: repositoryHrefPrefix;
 	}
 
 	private ValidationOptions getValidationOptions(List<File> moduleLocations, List<File> importedModuleLocations) {
@@ -296,7 +247,9 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 		options.setCheckModuleSemantics(true);
 		options.setCheckReferences(true);
 		options.setFileType(FileType.PUPPET_ROOT);
-		options.setPlatformURI(PPDiagnosticsRunner.getPuppet_2_7_1());
+
+		// TODO: Selectable in the UI
+		options.setPlatformURI(PptpResourceUtil.getPuppet_2_7_19());
 
 		options.setEncodingProvider(new IEncodingProvider() {
 			public String getEncoding(URI file) {
@@ -306,54 +259,91 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 
 		StringBuilder searchPath = new StringBuilder();
 
-		searchPath.append(new java.io.File("lib", "*").getPath());
+		searchPath.append("lib/*:environments/$environment/*");
 
 		for(File moduleLocation : moduleLocations)
-			searchPath.append(":" + new File(moduleLocation, "*").getPath());
+			searchPath.append(":" + getRelativePath(moduleLocation) + "/*");
 
 		for(File importedModuleLocation : importedModuleLocations)
-			searchPath.append(":" + new File(importedModuleLocation, "*").getPath());
+			searchPath.append(":" + getRelativePath(importedModuleLocation) + "/*");
 
 		options.setSearchPath(searchPath.toString());
 		options.setProblemsAdvisor(new DefaultPotentialProblemsAdvisor());
 		return options;
 	}
 
-	public ResultWithDiagnostic<String> invoke(File repositoryDir, VirtualChannel channel) throws IOException,
-			InterruptedException {
+	@Override
+	public ResultWithDiagnostic<byte[]> invoke(VirtualChannel channel) throws IOException, InterruptedException {
 
-		this.repositoryDir = repositoryDir;
-		ResultWithDiagnostic<String> result = new ResultWithDiagnostic<String>();
+		ResultWithDiagnostic<byte[]> result = new ResultWithDiagnostic<byte[]>();
 		List<File> moduleRoots = findModuleRoots();
 		if(moduleRoots.isEmpty()) {
 			result.addChild(new Diagnostic(Diagnostic.ERROR, "No modules found in repository"));
 			return result;
 		}
 
+		PPStandaloneSetup.doSetup();
+		MetadataRepository metadataRepo = getForge().createMetadataRepository();
+
+		int alreadyPublishedCount = 0;
 		List<Metadata> metadatas = new ArrayList<Metadata>();
-		for(File moduleRoot : moduleRoots)
-			metadatas.add(getModuleMetadata(moduleRoot));
+		for(File moduleRoot : moduleRoots) {
+			Metadata metadata = getModuleMetadata(moduleRoot);
+			if(metadataRepo.resolve(metadata.getName(), metadata.getVersion()) != null) {
+				Diagnostic diag = new Diagnostic(Diagnostic.WARNING, "Module " + metadata.getName() + ':' +
+						metadata.getVersion() + " has already been published");
+				diag.setIssue(ForgeBuilder.ALREADY_PUBLISHED);
+				diag.setResourcePath(moduleRoot.getAbsolutePath());
+				result.addChild(diag);
+				++alreadyPublishedCount;
+			}
+			metadatas.add(metadata);
+		}
+
+		if(metadatas.size() == alreadyPublishedCount) {
+			// This is an error but we still continue and produce the validation and graph
+			result.addChild(new Diagnostic(
+				Diagnostic.ERROR, "All modules have already been published at their current version"));
+		}
 
 		Set<Dependency> unresolvedCollector = new HashSet<Dependency>();
-		Set<Release> releasesToDownload = resolveDependencies(metadatas, unresolvedCollector);
+		Set<Release> releasesToDownload = resolveDependencies(metadataRepo, metadatas, unresolvedCollector);
 		for(Dependency unresolved : unresolvedCollector)
-			result.addChild(new Diagnostic(Diagnostic.WARNING, "Unable to resolve dependency: " + unresolved));
+			result.addChild(new Diagnostic(Diagnostic.WARNING, String.format(
+				"Unable to resolve dependency: %s:%s", unresolved.getName(),
+				unresolved.getVersionRequirement().toString())));
 
-		File importedModulesDir = new File(repositoryDir, "geppettoImportedModules");
-		importedModulesDir.mkdirs();
-		List<File> importedModuleRoots = new ArrayList<File>();
+		List<File> importedModuleRoots;
+		if(!releasesToDownload.isEmpty()) {
+			File importedModulesDir = new File(getRepositoryDir(), IMPORTED_MODULES_ROOT);
+			importedModulesDir.mkdirs();
+			importedModuleRoots = new ArrayList<File>();
 
-		ReleaseService releaseService = getForge().createReleaseService();
-		for(Release release : releasesToDownload)
-			importedModuleRoots.add(downloadAndInstall(releaseService, importedModulesDir, result, release));
+			ReleaseService releaseService = getForge().createReleaseService();
+			for(Release release : releasesToDownload) {
+				result.addChild(new Diagnostic(Diagnostic.INFO, "Installing dependent module " + release.getFullName() +
+						':' + release.getVersion()));
+				importedModuleRoots.add(downloadAndInstall(releaseService, importedModulesDir, result, release));
+			}
+		}
+		else {
+			importedModuleRoots = Collections.emptyList();
+			if(unresolvedCollector.isEmpty())
+				result.addChild(new Diagnostic(Diagnostic.INFO, "No addtional dependencies were detected"));
+		}
 
 		validate(moduleRoots, importedModuleRoots, result);
-
 		return result;
 	}
 
-	private Set<Release> resolveDependencies(List<Metadata> metadatas, Set<Dependency> unresolvedCollector)
-			throws IOException {
+	private byte[] produceSVG(InputStream dotStream) throws IOException {
+		ByteArrayOutputStream svgStream = new ByteArrayOutputStream();
+		new SVGProducer().produceSVG(dotStream, svgStream, false, new NullProgressMonitor());
+		return svgStream.toByteArray();
+	}
+
+	private Set<Release> resolveDependencies(MetadataRepository metadataRepo, List<Metadata> metadatas,
+			Set<Dependency> unresolvedCollector) throws IOException {
 		// Resolve missing dependencies
 		Set<Dependency> deps = new HashSet<Dependency>();
 		for(Metadata metadata : metadatas)
@@ -371,7 +361,6 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 		}
 
 		// Resolve remaining dependencies
-		MetadataRepository metadataRepo = getForge().createMetadataRepository();
 		Set<Release> releasesToDownload = new HashSet<Release>();
 		for(Dependency dep : deps)
 			releasesToDownload.addAll(metadataRepo.deepResolve(dep, unresolvedCollector));
@@ -379,7 +368,7 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 	}
 
 	private void validate(List<File> moduleLocations, List<File> importedModuleLocations,
-			ResultWithDiagnostic<String> result) throws IOException {
+			ResultWithDiagnostic<byte[]> result) throws IOException {
 
 		BasicDiagnostic diagnostics = new BasicDiagnostic();
 
@@ -390,13 +379,14 @@ public class ForgeValidator implements FileCallable<ResultWithDiagnostic<String>
 		options.setDependencyGraphOptions(graphOptions);
 
 		ValidationFactory.eINSTANCE.createValidationService().validate(
-			diagnostics, repositoryDir, options, moduleLocations.toArray(new File[moduleLocations.size()]),
-			new NullProgressMonitor());
+			diagnostics, getRepositoryDir(), options,
+			importedModuleLocations.toArray(new File[importedModuleLocations.size()]), new NullProgressMonitor());
 
-		for(org.eclipse.emf.common.util.Diagnostic diagnostic : diagnostics.getChildren())
-			result.addChild(convertValidationDiagnostic(diagnostic));
-
-		if(result.getSeverity() != Diagnostic.ERROR)
-			result.setResult(dotStream.toString(UTF_8));
+		for(org.eclipse.emf.common.util.Diagnostic diagnostic : diagnostics.getChildren()) {
+			Diagnostic diag = convertValidationDiagnostic(diagnostic);
+			if(diag != null)
+				result.addChild(diag);
+		}
+		result.setResult(produceSVG(dotStream.getInputStream()));
 	}
 }

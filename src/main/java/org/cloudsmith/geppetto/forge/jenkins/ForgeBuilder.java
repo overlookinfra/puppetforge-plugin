@@ -6,19 +6,32 @@ import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.UserRemoteConfig;
 import hudson.scm.SCM;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.ServletException;
 
 import net.sf.json.JSONObject;
 
 import org.cloudsmith.geppetto.forge.v2.client.ForgePreferencesBean;
+import org.eclipse.jgit.lib.ConfigConstants;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.StoredConfig;
+import org.eclipse.jgit.storage.file.FileRepository;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -36,11 +49,36 @@ public class ForgeBuilder extends Builder {
 	// This indicates to Jenkins that this is an implementation of an extension
 	// point.
 	public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
-		private String clientSecret;
+		private static FormValidation checkURL(String value) {
+			try {
+				URI uri = new URI(value);
+				if(!uri.isAbsolute())
+					return FormValidation.error("URL must be absolute");
 
-		private String clientId;
+				if(uri.isOpaque())
+					return FormValidation.error("URL must not be opaque");
 
-		private String oauthURL;
+				uri.toURL();
+				return FormValidation.ok();
+			}
+			catch(MalformedURLException e) {
+				return FormValidation.error(e, "Not a valid URL");
+			}
+			catch(URISyntaxException e) {
+				return FormValidation.error(e, "Not a valid URL");
+			}
+		}
+
+		private String clientId = "5017fd0247c2c027c8000001";
+
+		private String clientSecret = "4142f3b56ac369f974267be05bd9d1e90927e940b5cac2b3f431d8a4a2ffd2e7";
+
+		private String serviceURL = "http://localhost:4567";
+
+		public DescriptorImpl() {
+			super(ForgeBuilder.class);
+			load();
+		}
 
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
@@ -48,52 +86,26 @@ public class ForgeBuilder extends Builder {
 			return super.configure(req, formData);
 		}
 
-		/**
-		 * Performs on-the-fly validation of the form field 'clientId'.
-		 * 
-		 * @param value
-		 *            This parameter receives the value that the user has typed.
-		 * @return Indicates the outcome of the validation. This is sent to the
-		 *         browser.
-		 */
 		public FormValidation doCheckClientId(@QueryParameter String value) throws IOException, ServletException {
 			return FormValidation.ok();
 		}
 
-		/**
-		 * Performs on-the-fly validation of the form field 'clientSecret'.
-		 * 
-		 * @param value
-		 *            This parameter receives the value that the user has typed.
-		 * @return Indicates the outcome of the validation. This is sent to the
-		 *         browser.
-		 */
 		public FormValidation doCheckClientSecret(@QueryParameter String value) throws IOException, ServletException {
 			return FormValidation.ok();
 		}
 
-		/**
-		 * Performs on-the-fly validation of the form field 'oAuthURL'.
-		 * 
-		 * @param value
-		 *            This parameter receives the value that the user has typed.
-		 * @return Indicates the outcome of the validation. This is sent to the
-		 *         browser.
-		 */
 		public FormValidation doCheckOAuthURL(@QueryParameter String value) throws IOException, ServletException {
-			return FormValidation.ok();
+			return checkURL(value);
 		}
 
-		/**
-		 * @return the clientId
-		 */
+		public FormValidation doCheckServiceURL(@QueryParameter String value) throws IOException, ServletException {
+			return checkURL(value);
+		}
+
 		public String getClientId() {
 			return clientId;
 		}
 
-		/**
-		 * @return the clientSecret
-		 */
 		public String getClientSecret() {
 			return clientSecret;
 		}
@@ -106,11 +118,8 @@ public class ForgeBuilder extends Builder {
 			return "Puppet Forge Publisher";
 		}
 
-		/**
-		 * @return the authURL
-		 */
-		public String getOAuthURL() {
-			return oauthURL;
+		public String getServiceURL() {
+			return serviceURL;
 		}
 
 		@Override
@@ -120,42 +129,48 @@ public class ForgeBuilder extends Builder {
 			return true;
 		}
 
-		/**
-		 * @param clientId
-		 *            the clientId to set
-		 */
 		public void setClientId(String clientId) {
 			this.clientId = clientId;
 		}
 
-		/**
-		 * @param clientSecret
-		 *            the clientSecret to set
-		 */
 		public void setClientSecret(String clientSecret) {
 			this.clientSecret = clientSecret;
 		}
 
-		/**
-		 * @param oauthURL
-		 *            the authURL to set
-		 */
-		public void setOAuthURL(String oauthURL) {
-			this.oauthURL = oauthURL;
+		public void setServiceURL(String serviceURL) {
+			this.serviceURL = serviceURL;
 		}
 	}
 
-	private final String forgeOauthToken;
+	/**
+	 * Obtains the remote URL that is referenced by the given <code>branchName</code>
+	 * 
+	 * @return The URL or <code>null</code> if it hasn't been configured
+	 *         for the given branch.
+	 */
+	public static String getRemoteURL(FileRepository repository) throws IOException {
+		StoredConfig repoConfig = repository.getConfig();
+		String configuredRemote = repoConfig.getString(
+			ConfigConstants.CONFIG_BRANCH_SECTION, repository.getBranch(), ConfigConstants.CONFIG_KEY_REMOTE);
+		return configuredRemote == null
+				? null
+				: repoConfig.getString(
+					ConfigConstants.CONFIG_REMOTE_SECTION, configuredRemote, ConfigConstants.CONFIG_KEY_URL);
+	}
+
+	private final String forgeOAuthToken;
 
 	private final String forgeLogin;
 
 	private final String forgePassword;
 
+	public static final String ALREADY_PUBLISHED = "ALREADY_PUBLISHED";
+
 	// Fields in config.jelly must match the parameter names in the
 	// "DataBoundConstructor"
 	@DataBoundConstructor
-	public ForgeBuilder(String forgeOauthToken, String forgeLogin, String forgePassword) {
-		this.forgeOauthToken = forgeOauthToken;
+	public ForgeBuilder(String forgeOAuthToken, String forgeLogin, String forgePassword) {
+		this.forgeOAuthToken = forgeOAuthToken;
 		this.forgeLogin = forgeLogin;
 		this.forgePassword = forgePassword;
 	}
@@ -166,6 +181,18 @@ public class ForgeBuilder extends Builder {
 	@Override
 	public DescriptorImpl getDescriptor() {
 		return (DescriptorImpl) super.getDescriptor();
+	}
+
+	public String getForgeLogin() {
+		return forgeLogin;
+	}
+
+	public String getForgeOAuthToken() {
+		return forgeOAuthToken;
+	}
+
+	public String getForgePassword() {
+		return forgePassword;
 	}
 
 	@Override
@@ -179,18 +206,96 @@ public class ForgeBuilder extends Builder {
 		}
 		GitSCM git = (GitSCM) scm;
 		FilePath gitRoot = git.getModuleRoot(build.getWorkspace(), build);
+		List<UserRemoteConfig> repos = git.getUserRemoteConfigs();
+		if(repos.size() == 0) {
+			listener.error("Unable to find the Git repository URL");
+			return false;
+		}
+		if(repos.size() > 1) {
+			listener.error("Sorry, but publishing from multiple repositories is currently not supported");
+			return false;
+		}
+		String repository = repos.get(0).getUrl();
+
+		List<BranchSpec> branches = git.getBranches();
+		String branchName = null;
+		if(branches.size() == 0)
+			branchName = Constants.MASTER;
+		else if(branches.size() == 1) {
+			BranchSpec branchSpec = branches.get(0);
+			branchName = branchSpec.getName();
+			if("**".equals(branchName))
+				branchName = Constants.MASTER;
+		}
+		else {
+			listener.error("Sorry, but publishing from multiple branches is not supported");
+			return false;
+		}
 
 		DescriptorImpl desc = getDescriptor();
 		ForgePreferencesBean prefsBean = new ForgePreferencesBean();
-		prefsBean.setOAuthAccessToken(forgeOauthToken);
+		prefsBean.setOAuthAccessToken(forgeOAuthToken);
 		prefsBean.setLogin(forgeLogin);
 		prefsBean.setPassword(forgePassword);
 		prefsBean.setOAuthScopes("");
 		prefsBean.setOAuthClientId(desc.getClientId());
 		prefsBean.setOAuthClientSecret(desc.getClientSecret());
-		prefsBean.setOAuthURL(desc.getOAuthURL());
 
-		ResultWithDiagnostic<String> result = gitRoot.act(new ForgeValidator(prefsBean));
-		return true;
+		String serviceURL = desc.getServiceURL();
+		if(!serviceURL.endsWith("/"))
+			serviceURL += "/";
+		prefsBean.setOAuthURL(serviceURL + "oauth/token");
+		prefsBean.setBaseURL(serviceURL + "v2/");
+
+		boolean validationErrors = false;
+		ResultWithDiagnostic<byte[]> result = gitRoot.act(new ForgeValidator(prefsBean, repository, branchName));
+
+		// Emit non-validation diagnostics to the console
+		Iterator<Diagnostic> diagIter = result.getChildren().iterator();
+		List<String> alreadyPublished = new ArrayList<String>();
+		while(diagIter.hasNext()) {
+			Diagnostic diag = diagIter.next();
+			if(ALREADY_PUBLISHED.equals(diag.getIssue())) {
+				alreadyPublished.add(diag.getResourcePath());
+				diagIter.remove();
+				PrintStream logger = listener.getLogger();
+				logger.print("INFO:");
+				logger.println(diag.getMessage());
+				continue;
+			}
+
+			if(diag.getResourcePath() == null) {
+				switch(diag.getSeverity()) {
+					case Diagnostic.ERROR:
+						listener.error(diag.getMessage());
+						break;
+					case Diagnostic.FATAL:
+						listener.fatalError(diag.getMessage());
+						break;
+					default:
+						listener.getLogger().println(diag);
+				}
+				diagIter.remove();
+			}
+			else if(diag.getSeverity() == Diagnostic.ERROR)
+				validationErrors = true;
+		}
+
+		if(validationErrors)
+			listener.error("There are validation errors. See Validation Result for details");
+
+		ValidationResult data = new ValidationResult(build);
+		build.addAction(data);
+		data.setResult(result);
+		if(result.getSeverity() == Diagnostic.ERROR)
+			// we're done here.
+			return false;
+
+		ResultWithDiagnostic<String> publishingResult = gitRoot.act(new ForgePublisher(
+			prefsBean, repository, branchName, alreadyPublished));
+		for(Diagnostic diag : publishingResult.getChildren())
+			listener.getLogger().println(diag);
+
+		return publishingResult.getSeverity() != Diagnostic.ERROR;
 	}
 }

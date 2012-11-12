@@ -68,7 +68,7 @@ public class Diagnostic extends MessageWithSeverity {
 	public List<Diagnostic> getChildren() {
 		return children == null
 				? Collections.<Diagnostic> emptyList()
-				: Collections.unmodifiableList(children);
+				: children;
 	}
 
 	public int getHttpCode() {
