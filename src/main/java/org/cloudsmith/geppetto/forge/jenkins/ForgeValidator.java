@@ -162,7 +162,8 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 		if(dataObj instanceof DetailedDiagnosticData) {
 			DetailedDiagnosticData details = (DetailedDiagnosticData) dataObj;
 			resourcePath = details.getFile().getPath();
-			if(resourcePath != null && resourcePath.startsWith(IMPORTED_MODULES_ROOT))
+			if(resourcePath != null && resourcePath.startsWith(BUILD_DIR))
+				// We don't care about warnings/errors from imported modules
 				return null;
 			locationLabel = locationLabel(details);
 		}
@@ -315,7 +316,7 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 
 		List<File> importedModuleRoots;
 		if(!releasesToDownload.isEmpty()) {
-			File importedModulesDir = new File(getRepositoryDir(), IMPORTED_MODULES_ROOT);
+			File importedModulesDir = new File(getBuildDir(), IMPORTED_MODULES_ROOT);
 			importedModulesDir.mkdirs();
 			importedModuleRoots = new ArrayList<File>();
 

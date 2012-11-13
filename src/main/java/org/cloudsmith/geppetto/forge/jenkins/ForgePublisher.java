@@ -28,7 +28,6 @@ import org.cloudsmith.geppetto.forge.ForgeFactory;
 import org.cloudsmith.geppetto.forge.ForgeService;
 import org.cloudsmith.geppetto.forge.IncompleteException;
 import org.cloudsmith.geppetto.forge.Metadata;
-import org.cloudsmith.geppetto.forge.impl.MetadataImpl;
 import org.cloudsmith.geppetto.forge.util.TarUtils;
 import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
 import org.cloudsmith.geppetto.forge.v2.service.ReleaseService;
@@ -60,17 +59,13 @@ public class ForgePublisher extends ForgeCallable<String> {
 		if(ver == null)
 			throw new IncompleteException("version must be specified in the Modulefile");
 
-		for(File tst = destination; tst != null; tst = tst.getParentFile())
-			if(tst.equals(moduleSource))
-				throw new IllegalArgumentException("Destination cannot reside within the module itself");
-
 		String fullNameWithVersion = fullName + '-' + ver;
 		md.saveJSONMetadata(new File(moduleSource, "metadata.json"));
 
 		File moduleArchive = new File(destination, fullNameWithVersion + ".tar.gz");
 		OutputStream out = new GZIPOutputStream(new FileOutputStream(moduleArchive));
 		// Pack closes its output
-		TarUtils.pack(moduleSource, out, MetadataImpl.DEFAULT_EXCLUDES_PATTERN, false, fullNameWithVersion);
+		TarUtils.pack(moduleSource, out, DEFAULT_EXCLUDES_PATTERN, false, fullNameWithVersion);
 		return moduleArchive;
 	}
 
@@ -81,7 +76,7 @@ public class ForgePublisher extends ForgeCallable<String> {
 		ResultWithDiagnostic<String> result = new ResultWithDiagnostic<String>();
 		ForgeService forgeService = ForgeFactory.eINSTANCE.createForgeService();
 		String[] namesReceiver = new String[2];
-		File builtModules = new File(getRepositoryDir(), "builtModules");
+		File builtModules = new File(getBuildDir(), "builtModules");
 		if(!(builtModules.mkdirs() || builtModules.isDirectory())) {
 			result.addChild(new Diagnostic(Diagnostic.ERROR, "Unable to create directory" + builtModules.getPath()));
 			return result;

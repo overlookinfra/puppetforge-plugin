@@ -96,11 +96,11 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 	}
 
 	public String getIconFileName() {
-		return Functions.getResourcePath() + "/plugin/puppetforge/icons/hammer-32x32.png";
+		return Functions.getResourcePath() + "/plugin/puppetforge/icons/puppetlabs-32x32.png";
 	}
 
 	public String getLargeIconFileName() {
-		return "/plugin/puppetforge/icons/hammer-48x48.png";
+		return "/plugin/puppetforge/icons/puppetlabs-48x48.png";
 	}
 
 	public byte[] getResult() {
