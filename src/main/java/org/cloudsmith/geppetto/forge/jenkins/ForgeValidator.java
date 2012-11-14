@@ -45,6 +45,9 @@ import org.cloudsmith.geppetto.forge.v2.service.ReleaseService;
 import org.cloudsmith.geppetto.pp.dsl.PPStandaloneSetup;
 import org.cloudsmith.geppetto.pp.dsl.target.PptpResourceUtil;
 import org.cloudsmith.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
+import org.cloudsmith.geppetto.puppetlint.PuppetLintRunner;
+import org.cloudsmith.geppetto.puppetlint.PuppetLintRunner.Issue;
+import org.cloudsmith.geppetto.puppetlint.PuppetLintService;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
@@ -62,7 +65,7 @@ import com.cloudsmith.hammer.puppet.validation.graphs.SVGProducer;
 import com.cloudsmith.hammer.puppet.validation.runner.IEncodingProvider;
 import com.google.gson.Gson;
 
-public class ForgeValidator extends ForgeCallable<byte[]> {
+public class ForgeValidator extends ForgeCallable<ResultWithDiagnostic<byte[]>> {
 	private static final long serialVersionUID = -2352185785743765350L;
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -103,6 +106,15 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 				type = DiagnosticType.UNKNOWN;
 		}
 		return type;
+	}
+
+	private static int getSeverity(Issue issue) {
+		switch(issue.getSeverity()) {
+			case ERROR:
+				return Diagnostic.ERROR;
+			default:
+				return Diagnostic.WARNING;
+		}
 	}
 
 	private static int getSeverity(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
@@ -154,6 +166,17 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 		super(forgePreferences, repositoryURL, branchName);
 	}
 
+	private Diagnostic convertPuppetLintDiagnostic(File moduleRoot, Issue issue) {
+		Diagnostic diagnostic = new Diagnostic();
+		diagnostic.setSeverity(getSeverity(issue));
+		diagnostic.setMessage(issue.getMessage());
+		diagnostic.setType(DiagnosticType.PUPPET_LINT);
+		diagnostic.setSource(getRepositoryHrefPrefix());
+		diagnostic.setResourcePath(getRelativePath(new File(moduleRoot, issue.getPath())));
+		diagnostic.setLocationLabel(Integer.toString(issue.getLineNumber()));
+		return diagnostic;
+	}
+
 	private Diagnostic convertValidationDiagnostic(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
 
 		Object dataObj = validationDiagnostic.getData().get(0);
@@ -186,6 +209,29 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 		File moduleDir = new File(modulesRoot, module.getName());
 		TarUtils.unpack(new GZIPInputStream(content.getInputStream()), moduleDir, false);
 		return moduleDir;
+	}
+
+	private void geppettoValidation(List<File> moduleLocations, List<File> importedModuleLocations,
+			ResultWithDiagnostic<byte[]> result) throws IOException {
+
+		BasicDiagnostic diagnostics = new BasicDiagnostic();
+
+		OpenBAStream dotStream = new OpenBAStream();
+
+		ModuleDependencyGraphOptions graphOptions = getDependencyGraphOptions(dotStream, importedModuleLocations);
+		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations);
+		options.setDependencyGraphOptions(graphOptions);
+
+		ValidationFactory.eINSTANCE.createValidationService().validate(
+			diagnostics, getRepositoryDir(), options,
+			importedModuleLocations.toArray(new File[importedModuleLocations.size()]), new NullProgressMonitor());
+
+		for(org.eclipse.emf.common.util.Diagnostic diagnostic : diagnostics.getChildren()) {
+			Diagnostic diag = convertValidationDiagnostic(diagnostic);
+			if(diag != null)
+				result.addChild(diag);
+		}
+		result.setResult(produceSVG(dotStream.getInputStream()));
 	}
 
 	private ModuleDependencyGraphOptions getDependencyGraphOptions(OutputStream dotStream, List<File> moduleLocations)
@@ -333,8 +379,20 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 				result.addChild(new Diagnostic(Diagnostic.INFO, "No addtional dependencies were detected"));
 		}
 
-		validate(moduleRoots, importedModuleRoots, result);
+		geppettoValidation(moduleRoots, importedModuleRoots, result);
+		lintValidation(moduleRoots, result);
 		return result;
+	}
+
+	private void lintValidation(List<File> moduleLocations, Diagnostic result) throws IOException {
+		PuppetLintRunner runner = PuppetLintService.getInstance().getPuppetLintRunner();
+		for(File moduleRoot : moduleLocations) {
+			for(PuppetLintRunner.Issue issue : runner.run(moduleRoot)) {
+				Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, issue);
+				if(diag != null)
+					result.addChild(diag);
+			}
+		}
 	}
 
 	private byte[] produceSVG(InputStream dotStream) throws IOException {
@@ -366,28 +424,5 @@ public class ForgeValidator extends ForgeCallable<byte[]> {
 		for(Dependency dep : deps)
 			releasesToDownload.addAll(metadataRepo.deepResolve(dep, unresolvedCollector));
 		return releasesToDownload;
-	}
-
-	private void validate(List<File> moduleLocations, List<File> importedModuleLocations,
-			ResultWithDiagnostic<byte[]> result) throws IOException {
-
-		BasicDiagnostic diagnostics = new BasicDiagnostic();
-
-		OpenBAStream dotStream = new OpenBAStream();
-
-		ModuleDependencyGraphOptions graphOptions = getDependencyGraphOptions(dotStream, importedModuleLocations);
-		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations);
-		options.setDependencyGraphOptions(graphOptions);
-
-		ValidationFactory.eINSTANCE.createValidationService().validate(
-			diagnostics, getRepositoryDir(), options,
-			importedModuleLocations.toArray(new File[importedModuleLocations.size()]), new NullProgressMonitor());
-
-		for(org.eclipse.emf.common.util.Diagnostic diagnostic : diagnostics.getChildren()) {
-			Diagnostic diag = convertValidationDiagnostic(diagnostic);
-			if(diag != null)
-				result.addChild(diag);
-		}
-		result.setResult(produceSVG(dotStream.getInputStream()));
 	}
 }

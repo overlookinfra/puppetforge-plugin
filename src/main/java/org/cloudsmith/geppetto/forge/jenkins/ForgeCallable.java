@@ -26,7 +26,7 @@ import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
 import org.eclipse.jgit.storage.file.FileRepository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
-public abstract class ForgeCallable<T> implements FileCallable<ResultWithDiagnostic<T>> {
+public abstract class ForgeCallable<T> implements FileCallable<T> {
 	private static final long serialVersionUID = -3048930993120683688L;
 
 	public static final String IMPORTED_MODULES_ROOT = "importedModules";
@@ -135,12 +135,11 @@ public abstract class ForgeCallable<T> implements FileCallable<ResultWithDiagnos
 		return repositoryURL;
 	}
 
-	public final ResultWithDiagnostic<T> invoke(File f, VirtualChannel channel) throws IOException,
-			InterruptedException {
+	public final T invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
 		repositoryDir = f;
 		buildDir = new File(f, BUILD_DIR);
 		return invoke(channel);
 	}
 
-	protected abstract ResultWithDiagnostic<T> invoke(VirtualChannel channel) throws IOException, InterruptedException;
+	protected abstract T invoke(VirtualChannel channel) throws IOException, InterruptedException;
 }

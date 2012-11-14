@@ -32,7 +32,7 @@ import org.cloudsmith.geppetto.forge.util.TarUtils;
 import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
 import org.cloudsmith.geppetto.forge.v2.service.ReleaseService;
 
-public class ForgePublisher extends ForgeCallable<String> {
+public class ForgePublisher extends ForgeCallable<Diagnostic> {
 	private static final long serialVersionUID = 6670226727298746933L;
 
 	private Collection<String> alreadyPublished;
@@ -70,10 +70,10 @@ public class ForgePublisher extends ForgeCallable<String> {
 	}
 
 	@Override
-	protected ResultWithDiagnostic<String> invoke(VirtualChannel channel) throws IOException, InterruptedException {
+	protected Diagnostic invoke(VirtualChannel channel) throws IOException, InterruptedException {
 		ReleaseService releaseService = getForge().createReleaseService();
 
-		ResultWithDiagnostic<String> result = new ResultWithDiagnostic<String>();
+		Diagnostic result = new Diagnostic();
 		ForgeService forgeService = ForgeFactory.eINSTANCE.createForgeService();
 		String[] namesReceiver = new String[2];
 		File builtModules = new File(getBuildDir(), "builtModules");

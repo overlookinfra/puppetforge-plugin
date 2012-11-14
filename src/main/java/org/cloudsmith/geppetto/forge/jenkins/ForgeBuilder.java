@@ -291,7 +291,7 @@ public class ForgeBuilder extends Builder {
 			// we're done here.
 			return false;
 
-		ResultWithDiagnostic<String> publishingResult = gitRoot.act(new ForgePublisher(
+		Diagnostic publishingResult = gitRoot.act(new ForgePublisher(
 			prefsBean, repository, branchName, alreadyPublished));
 		for(Diagnostic diag : publishingResult.getChildren())
 			listener.getLogger().println(diag);

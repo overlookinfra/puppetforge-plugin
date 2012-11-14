@@ -35,17 +35,17 @@
 		</dependency>
 		<dependency>
 			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>forge.api</artifactId>
+			<artifactId>org.cloudsmith.geppetto.forge.api</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>forge</artifactId>
+			<artifactId>org.cloudsmith.geppetto.forge</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.cloudsmith.hammer</groupId>
-			<artifactId>puppet.validation</artifactId>
+			<artifactId>com.cloudsmith.hammer.puppet.validation</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
@@ -57,6 +57,11 @@
 			<groupId>org.eclipse.jgit</groupId>
 			<artifactId>org.eclipse.jgit</artifactId>
 			<version>2.0.0.201206130900-r</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cloudsmith.geppetto</groupId>
+			<artifactId>org.cloudsmith.geppetto.puppetlint</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 
