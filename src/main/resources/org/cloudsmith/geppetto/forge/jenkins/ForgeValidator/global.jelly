@@ -16,7 +16,7 @@
   <!--
     This Jelly script is used to produce the global configuration option.
   -->
-  <f:section title="Puppet Forge">
+  <f:section title="Puppet Forge Validation">
     <f:entry title="Service URL" field="serviceURL"
       description="The URL used when connecting to the Puppet Forge service">
       <f:textbox default="http://localhost:4567"/>

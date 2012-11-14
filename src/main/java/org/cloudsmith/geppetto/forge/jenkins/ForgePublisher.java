@@ -11,106 +11,113 @@
  */
 package org.cloudsmith.geppetto.forge.jenkins;
 
-import hudson.remoting.VirtualChannel;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.matrix.MatrixAggregatable;
+import hudson.matrix.MatrixAggregator;
+import hudson.matrix.MatrixRun;
+import hudson.matrix.MatrixBuild;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.plugins.git.GitSCM;
+import hudson.scm.SCM;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Publisher;
+import hudson.tasks.Recorder;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.Collection;
-import java.util.zip.GZIPOutputStream;
+import java.io.Serializable;
+import java.util.List;
 
-import org.apache.http.client.HttpResponseException;
-import org.cloudsmith.geppetto.common.os.StreamUtil;
-import org.cloudsmith.geppetto.forge.ForgeFactory;
-import org.cloudsmith.geppetto.forge.ForgeService;
-import org.cloudsmith.geppetto.forge.IncompleteException;
-import org.cloudsmith.geppetto.forge.Metadata;
-import org.cloudsmith.geppetto.forge.util.TarUtils;
-import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
-import org.cloudsmith.geppetto.forge.v2.service.ReleaseService;
+import org.kohsuke.stapler.DataBoundConstructor;
 
-public class ForgePublisher extends ForgeCallable<Diagnostic> {
-	private static final long serialVersionUID = 6670226727298746933L;
+public class ForgePublisher extends Recorder implements Serializable, MatrixAggregatable {
+	@Extension(ordinal = -1)
+	public static class DescriptorImpl extends BuildStepDescriptor<Publisher> {
+		@Override
+		public String getDisplayName() {
+			return "Puppet Forge Publishing";
+		}
 
-	private Collection<String> alreadyPublished;
-
-	public ForgePublisher() {
+		@Override
+		public boolean isApplicable(Class<? extends AbstractProject> jobType) {
+			return true;
+		}
 	}
 
-	public ForgePublisher(ForgePreferences forgePreferences, String repositoryURL, String branchName,
-			Collection<String> alreadyPublished) {
-		super(forgePreferences, repositoryURL, branchName);
-		this.alreadyPublished = alreadyPublished;
+	private static final long serialVersionUID = 1L;
+
+	private final boolean publishOnlyIfSuccess;
+
+	@DataBoundConstructor
+	public ForgePublisher(Boolean publishOnlyIfSuccess) {
+		this.publishOnlyIfSuccess = publishOnlyIfSuccess == null
+				? true
+				: publishOnlyIfSuccess.booleanValue();
 	}
 
-	private File buildForge(ForgeService forgeService, File moduleSource, File destination, String[] namesReceiver)
-			throws IOException, IncompleteException {
-		Metadata md = forgeService.loadModule(moduleSource);
-		namesReceiver[0] = md.getUser();
-		namesReceiver[1] = md.getName();
-		String fullName = md.getFullName();
-		if(fullName == null)
-			throw new IncompleteException("A full name (user-module) must be specified in the Modulefile");
+	/**
+	 * For a matrix project, push should only happen once.
+	 */
+	public MatrixAggregator createAggregator(MatrixBuild build, Launcher launcher, BuildListener listener) {
+		return new MatrixAggregator(build, launcher, listener) {
+			@Override
+			public boolean endBuild() throws InterruptedException, IOException {
+				return ForgePublisher.this.perform(build, launcher, listener);
+			}
+		};
+	}
 
-		String ver = md.getVersion();
-		if(ver == null)
-			throw new IncompleteException("version must be specified in the Modulefile");
+	public BuildStepMonitor getRequiredMonitorService() {
+		return BuildStepMonitor.BUILD;
+	}
 
-		String fullNameWithVersion = fullName + '-' + ver;
-		md.saveJSONMetadata(new File(moduleSource, "metadata.json"));
-
-		File moduleArchive = new File(destination, fullNameWithVersion + ".tar.gz");
-		OutputStream out = new GZIPOutputStream(new FileOutputStream(moduleArchive));
-		// Pack closes its output
-		TarUtils.pack(moduleSource, out, DEFAULT_EXCLUDES_PATTERN, false, fullNameWithVersion);
-		return moduleArchive;
+	public boolean isPublishOnlyIfSuccess() {
+		return publishOnlyIfSuccess;
 	}
 
 	@Override
-	protected Diagnostic invoke(VirtualChannel channel) throws IOException, InterruptedException {
-		ReleaseService releaseService = getForge().createReleaseService();
+	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, final BuildListener listener)
+			throws InterruptedException, IOException {
 
-		Diagnostic result = new Diagnostic();
-		ForgeService forgeService = ForgeFactory.eINSTANCE.createForgeService();
-		String[] namesReceiver = new String[2];
-		File builtModules = new File(getBuildDir(), "builtModules");
-		if(!(builtModules.mkdirs() || builtModules.isDirectory())) {
-			result.addChild(new Diagnostic(Diagnostic.ERROR, "Unable to create directory" + builtModules.getPath()));
-			return result;
+		// during matrix build, the push back would happen at the very end only once for the whole matrix,
+		// not for individual configuration build.
+		if(build instanceof MatrixRun) {
+			return true;
 		}
 
-		for(File moduleRoot : findModuleRoots()) {
-			if(alreadyPublished.contains(moduleRoot.getAbsolutePath()))
-				continue;
-
-			File moduleArchive;
-			try {
-				moduleArchive = buildForge(forgeService, moduleRoot, builtModules, namesReceiver);
-			}
-			catch(IncompleteException e) {
-				result.addChild(new Diagnostic(Diagnostic.ERROR, e.getMessage()));
-				continue;
-			}
-			InputStream gzInput = new FileInputStream(moduleArchive);
-			try {
-				releaseService.create(
-					namesReceiver[0], namesReceiver[1], "Published using GitHub trigger", gzInput,
-					moduleArchive.length());
-				result.addChild(new Diagnostic(Diagnostic.INFO, "Module file " + moduleArchive.getName() +
-						" has been uploaded"));
-			}
-			catch(HttpResponseException e) {
-				result.addChild(new Diagnostic(Diagnostic.ERROR, "Unable to publish module " + moduleArchive.getName() +
-						":" + e.getMessage()));
-				continue;
-			}
-			finally {
-				StreamUtil.close(gzInput);
-			}
+		List<ValidationResult> forgeValidators = build.getActions(ValidationResult.class);
+		if(forgeValidators.isEmpty()) {
+			listener.error("No Puppet Validation Result was found so no pushing will occur.");
+			return false;
 		}
-		return result;
+
+		final Result buildResult = build.getResult();
+
+		// If publishOnlyIfSuccess is selected and the build is not a success, don't push.
+		if(publishOnlyIfSuccess && buildResult.isWorseThan(Result.SUCCESS)) {
+			listener.getLogger().println(
+				"Build did not succeed and the project is configured to only push after a successful build, so no pushing will occur.");
+			return true;
+		}
+
+		SCM scm = build.getProject().getScm();
+		if(!(scm instanceof GitSCM)) {
+			listener.error("Unable to find Git SCM configuration in the project configuration");
+			return false;
+		}
+		GitSCM git = (GitSCM) scm;
+		FilePath gitRoot = git.getModuleRoot(build.getWorkspace(), build);
+		Diagnostic publishingResult = gitRoot.act(new ForgePublisherCallable(forgeValidators.get(0)));
+		for(Diagnostic diag : publishingResult.getChildren())
+			listener.getLogger().println(diag);
+
+		PublicationResult data = new PublicationResult(build, publishingResult);
+		build.addAction(data);
+		return publishingResult.getSeverity() < Diagnostic.ERROR;
 	}
 }

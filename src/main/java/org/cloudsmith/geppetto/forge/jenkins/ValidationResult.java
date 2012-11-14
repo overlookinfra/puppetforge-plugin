@@ -21,25 +21,40 @@ import hudson.model.Api;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
 
+import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.ExportedBean;
 
 @ExportedBean(defaultVisibility = 999)
 public class ValidationResult implements Action, Serializable, Cloneable {
-	private static final long serialVersionUID = 264848698476660935L;
+	private static final long serialVersionUID = 2584295798889630530L;
 
 	private ResultWithDiagnostic<byte[]> resultDiagnostic;
 
 	private final AbstractBuild<?, ?> build;
 
-	public ValidationResult(AbstractBuild<?, ?> build) {
+	private final ForgePreferences forgePreferences;
+
+	private final Collection<Diagnostic> alreadyPublished;
+
+	private final String branchName;
+
+	private final String repositoryURL;
+
+	public ValidationResult(AbstractBuild<?, ?> build, ForgePreferences forgePreferences, String repositoryURL,
+			String branchName, Collection<Diagnostic> alreadyPublished) {
 		this.build = build;
+		this.forgePreferences = forgePreferences;
+		this.repositoryURL = repositoryURL;
+		this.branchName = branchName;
+		this.alreadyPublished = alreadyPublished;
 	}
 
 	@Override
@@ -83,8 +98,16 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
 	}
 
+	public Collection<Diagnostic> getAlreadyPublished() {
+		return alreadyPublished;
+	}
+
 	public Api getApi() {
 		return new Api(this);
+	}
+
+	public String getBranchName() {
+		return branchName;
 	}
 
 	public AbstractBuild<?, ?> getBuild() {
@@ -95,12 +118,20 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return "Validation Results";
 	}
 
+	public ForgePreferences getForgePreferences() {
+		return forgePreferences;
+	}
+
 	public String getIconFileName() {
 		return Functions.getResourcePath() + "/plugin/puppetforge/icons/puppetlabs-32x32.png";
 	}
 
 	public String getLargeIconFileName() {
 		return "/plugin/puppetforge/icons/puppetlabs-48x48.png";
+	}
+
+	public String getRepositoryURL() {
+		return repositoryURL;
 	}
 
 	public byte[] getResult() {
