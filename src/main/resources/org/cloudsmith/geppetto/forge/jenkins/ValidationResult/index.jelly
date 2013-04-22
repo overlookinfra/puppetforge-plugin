@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Copyright 2012-, Cloudsmith Inc.
+ Copyright 2013-, Cloudsmith Inc.
 
  Licensed under the Apache License, Version 2.0 (the "License"). You may not
  use this file except in compliance with the License. You may obtain a copy
@@ -42,18 +42,18 @@
 						</thead>
 						<tbody>
 							<j:forEach var="diag" items="${it.resultDiagnostics}">
-								<j:if test="${diag.resourcePath != null}">
+								<j:if test="${diag.path != null}">
 									<tr>
 										<td style="overflow:hidden">${diag.severityString}</td>
-										<td style="overflow:hidden">${diag.type}</td>
+										<td style="overflow:hidden">${diag.type.name}</td>
 										<td style="overflow:hidden;text-overflow:ellipsis">${diag.message}</td>
 										<td style="overflow:hidden;text-overflow:ellipsis">
 											<j:choose>
 												<j:when test="${diag.line != 0}">
-													<a href="${diag.source}/${diag.resourcePath}#L${diag.line}" target="_blank">${diag.resourcePath}: ${diag.line}</a>
+													<a href="${diag.hrefPrefix}/${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
 												</j:when>
 												<j:otherwise>
-													<a href="${diag.source}/${diag.resourcePath}" target="_blank">${diag.resourcePath}</a>
+													<a href="${diag.hrefPrefix}/${diag.path}" target="_blank">${diag.path}</a>
 												</j:otherwise>
 											</j:choose>
 										</td>

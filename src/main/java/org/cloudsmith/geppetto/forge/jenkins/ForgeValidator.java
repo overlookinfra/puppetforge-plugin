@@ -24,9 +24,13 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
-import org.cloudsmith.geppetto.forge.v2.client.ForgePreferencesBean;
+import org.cloudsmith.geppetto.diagnostic.Diagnostic;
+import org.cloudsmith.geppetto.diagnostic.DiagnosticType;
+import org.cloudsmith.geppetto.forge.impl.ForgePreferencesBean;
+import org.cloudsmith.geppetto.puppetlint.PuppetLintRunner.Option;
 import org.eclipse.jgit.lib.ConfigConstants;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.StoredConfig;
@@ -69,11 +73,7 @@ public class ForgeValidator extends Builder {
 			}
 		}
 
-		private String clientId = "5017fd0247c2c027c8000001";
-
-		private String clientSecret = "4142f3b56ac369f974267be05bd9d1e90927e940b5cac2b3f431d8a4a2ffd2e7";
-
-		private String serviceURL = "http://localhost:4567";
+		private String serviceURL = FORGE_SERVICE_URL;
 
 		public DescriptorImpl() {
 			super(ForgeValidator.class);
@@ -86,28 +86,8 @@ public class ForgeValidator extends Builder {
 			return super.configure(req, formData);
 		}
 
-		public FormValidation doCheckClientId(@QueryParameter String value) throws IOException, ServletException {
-			return FormValidation.ok();
-		}
-
-		public FormValidation doCheckClientSecret(@QueryParameter String value) throws IOException, ServletException {
-			return FormValidation.ok();
-		}
-
-		public FormValidation doCheckOAuthURL(@QueryParameter String value) throws IOException, ServletException {
-			return checkURL(value);
-		}
-
 		public FormValidation doCheckServiceURL(@QueryParameter String value) throws IOException, ServletException {
 			return checkURL(value);
-		}
-
-		public String getClientId() {
-			return clientId;
-		}
-
-		public String getClientSecret() {
-			return clientSecret;
 		}
 
 		/**
@@ -115,7 +95,7 @@ public class ForgeValidator extends Builder {
 		 */
 		@Override
 		public String getDisplayName() {
-			return "Puppet Forge Validation";
+			return "Validate Puppet Module";
 		}
 
 		public String getServiceURL() {
@@ -129,17 +109,38 @@ public class ForgeValidator extends Builder {
 			return true;
 		}
 
-		public void setClientId(String clientId) {
-			this.clientId = clientId;
-		}
-
-		public void setClientSecret(String clientSecret) {
-			this.clientSecret = clientSecret;
-		}
-
 		public void setServiceURL(String serviceURL) {
 			this.serviceURL = serviceURL;
 		}
+	}
+
+	static final String FORGE_SERVICE_URL = "http://forgeapi.puppetlabs.com";
+
+	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
+
+	public static final String ALREADY_PUBLISHED = "ALREADY_PUBLISHED";
+
+	static ForgePreferencesBean getForgePreferences() {
+		ForgePreferencesBean prefsBean = new ForgePreferencesBean();
+		DescriptorImpl desc = (DescriptorImpl) Jenkins.getInstance().getDescriptorOrDie(ForgeValidator.class);
+		String serviceURL = desc.getServiceURL();
+		if(!serviceURL.endsWith("/"))
+			serviceURL += "/";
+		prefsBean.setOAuthURL(serviceURL + "oauth/token");
+		prefsBean.setBaseURL(serviceURL + "v2/");
+		return prefsBean;
+	}
+
+	private static Option getOption(String s) {
+		s = s.trim();
+		for(Option option : Option.values()) {
+			String on = option.toString();
+			// Option string starts with "no-" and ends with "-check". We strip that
+			// before comparing.
+			if(on.startsWith("no-") && on.substring(3, on.length() - 6).equalsIgnoreCase(s))
+				return option;
+		}
+		throw new IllegalArgumentException("The string '" + s + "' does not represent a known puppet-lint option");
 	}
 
 	/**
@@ -158,41 +159,39 @@ public class ForgeValidator extends Builder {
 					ConfigConstants.CONFIG_REMOTE_SECTION, configuredRemote, ConfigConstants.CONFIG_KEY_URL);
 	}
 
-	private final String forgeOAuthToken;
+	private final boolean checkReferences;
 
-	private final String forgeLogin;
+	private final boolean checkModuleSemantics;
 
-	private final String forgePassword;
+	private final String puppetLintOptions;
 
-	public static final String ALREADY_PUBLISHED = "ALREADY_PUBLISHED";
-
-	// Fields in config.jelly must match the parameter names in the
-	// "DataBoundConstructor"
 	@DataBoundConstructor
-	public ForgeValidator(String forgeOAuthToken, String forgeLogin, String forgePassword) {
-		this.forgeOAuthToken = forgeOAuthToken;
-		this.forgeLogin = forgeLogin;
-		this.forgePassword = forgePassword;
+	public ForgeValidator(Boolean checkReferences, Boolean checkModuleSemantics, String puppetLintOptions) {
+		this.checkReferences = checkReferences == null
+				? false
+				: checkReferences.booleanValue();
+		this.checkModuleSemantics = checkModuleSemantics == null
+				? false
+				: checkModuleSemantics.booleanValue();
+
+		if(puppetLintOptions != null) {
+			puppetLintOptions = puppetLintOptions.trim();
+			if(puppetLintOptions.length() == 0)
+				puppetLintOptions = null;
+		}
+		this.puppetLintOptions = puppetLintOptions;
 	}
 
-	// Overridden for better type safety.
-	// If your plugin doesn't really define any property on Descriptor,
-	// you don't have to do this.
-	@Override
-	public DescriptorImpl getDescriptor() {
-		return (DescriptorImpl) super.getDescriptor();
+	public String getPuppetLintOptions() {
+		return puppetLintOptions;
 	}
 
-	public String getForgeLogin() {
-		return forgeLogin;
+	public boolean isCheckModuleSemantics() {
+		return checkModuleSemantics;
 	}
 
-	public String getForgeOAuthToken() {
-		return forgeOAuthToken;
-	}
-
-	public String getForgePassword() {
-		return forgePassword;
+	public boolean isCheckReferences() {
+		return checkReferences;
 	}
 
 	@Override
@@ -232,36 +231,62 @@ public class ForgeValidator extends Builder {
 			return false;
 		}
 
-		DescriptorImpl desc = getDescriptor();
-		ForgePreferencesBean prefsBean = new ForgePreferencesBean();
-		prefsBean.setOAuthAccessToken(forgeOAuthToken);
-		prefsBean.setLogin(forgeLogin);
-		prefsBean.setPassword(forgePassword);
-		prefsBean.setOAuthScopes("");
-		prefsBean.setOAuthClientId(desc.getClientId());
-		prefsBean.setOAuthClientSecret(desc.getClientSecret());
+		Option[] options;
+		if(puppetLintOptions == null)
+			options = null;
+		else {
+			boolean isNegative = puppetLintOptions.startsWith("-");
+			int start = 0;
+			if(isNegative)
+				++start;
 
-		String serviceURL = desc.getServiceURL();
-		if(!serviceURL.endsWith("/"))
-			serviceURL += "/";
-		prefsBean.setOAuthURL(serviceURL + "oauth/token");
-		prefsBean.setBaseURL(serviceURL + "v2/");
+			boolean allValid = true;
+			ArrayList<Option> optionList = new ArrayList<Option>();
+			int top = puppetLintOptions.length();
+			int commaIdx;
+			while(start < top && (commaIdx = puppetLintOptions.indexOf(',', start)) > 0) {
+				try {
+					optionList.add(getOption(puppetLintOptions.substring(start, commaIdx)));
+				}
+				catch(IllegalArgumentException e) {
+					allValid = false;
+					listener.error(e.getMessage());
+				}
+				start = commaIdx + 1;
+			}
+			if(start < top)
+				try {
+					optionList.add(getOption(puppetLintOptions.substring(start)));
+				}
+				catch(IllegalArgumentException e) {
+					allValid = false;
+					listener.error(e.getMessage());
+				}
 
+			if(!allValid)
+				return false;
+
+			if(!isNegative) {
+				// Inverse the list of options
+				ArrayList<Option> inverseList = new ArrayList<Option>();
+				for(Option option : Option.values())
+					if(!optionList.contains(option))
+						inverseList.add(option);
+				optionList = inverseList;
+			}
+			options = optionList.toArray(new Option[optionList.size()]);
+		}
+
+		ForgePreferencesBean prefsBean = getForgePreferences();
 		boolean validationErrors = false;
-		ResultWithDiagnostic<byte[]> result = gitRoot.act(new ForgeValidatorCallable(prefsBean, repository, branchName));
+		ResultWithDiagnostic<byte[]> result = gitRoot.act(new ForgeValidatorCallable(
+			prefsBean, repository, branchName, checkReferences, checkModuleSemantics, options));
 
 		// Emit non-validation diagnostics to the console
 		Iterator<Diagnostic> diagIter = result.getChildren().iterator();
-		List<Diagnostic> alreadyPublished = new ArrayList<Diagnostic>();
 		while(diagIter.hasNext()) {
 			Diagnostic diag = diagIter.next();
-			if(ALREADY_PUBLISHED.equals(diag.getIssue())) {
-				alreadyPublished.add(diag);
-				diagIter.remove();
-				continue;
-			}
-
-			if(diag.getResourcePath() == null) {
+			if(!(diag instanceof ValidationDiagnostic)) {
 				switch(diag.getSeverity()) {
 					case Diagnostic.ERROR:
 						listener.error(diag.getMessage());
@@ -281,7 +306,7 @@ public class ForgeValidator extends Builder {
 		if(validationErrors)
 			listener.error("There are validation errors. See Validation Result for details");
 
-		ValidationResult data = new ValidationResult(build, prefsBean, repository, branchName, alreadyPublished);
+		ValidationResult data = new ValidationResult(build, prefsBean, repository, branchName);
 		build.addAction(data);
 		data.setResult(result);
 		return result.getSeverity() < Diagnostic.ERROR;

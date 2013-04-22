@@ -21,13 +21,13 @@ import hudson.model.Api;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
 
-import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
+import org.cloudsmith.geppetto.diagnostic.Diagnostic;
+import org.cloudsmith.geppetto.forge.ForgePreferences;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.ExportedBean;
@@ -40,21 +40,18 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	private final AbstractBuild<?, ?> build;
 
-	private final ForgePreferences forgePreferences;
-
-	private final Collection<Diagnostic> alreadyPublished;
+	private final org.cloudsmith.geppetto.forge.ForgePreferences forgePreferences;
 
 	private final String branchName;
 
 	private final String repositoryURL;
 
 	public ValidationResult(AbstractBuild<?, ?> build, ForgePreferences forgePreferences, String repositoryURL,
-			String branchName, Collection<Diagnostic> alreadyPublished) {
+			String branchName) {
 		this.build = build;
 		this.forgePreferences = forgePreferences;
 		this.repositoryURL = repositoryURL;
 		this.branchName = branchName;
-		this.alreadyPublished = alreadyPublished;
 	}
 
 	@Override
@@ -96,10 +93,6 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 			}
 		}
 		rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
-	}
-
-	public Collection<Diagnostic> getAlreadyPublished() {
-		return alreadyPublished;
 	}
 
 	public Api getApi() {
@@ -150,20 +143,26 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return getResultDiagnostics().size();
 	}
 
+	public int getSeverity() {
+		return resultDiagnostic == null
+				? Diagnostic.OK
+				: resultDiagnostic.getSeverity();
+	}
+
 	public String getSummary() {
 		return getSummary(getResultDiagnostics());
 	}
 
-	protected String getSummary(List<? extends MessageWithSeverity> messages) {
+	protected String getSummary(List<? extends Diagnostic> messages) {
 		int errorCount = 0;
 		int warningCount = 0;
-		for(MessageWithSeverity msg : messages) {
+		for(Diagnostic msg : messages) {
 			switch(msg.getSeverity()) {
-				case MessageWithSeverity.WARNING:
+				case Diagnostic.WARNING:
 					warningCount++;
 					break;
-				case MessageWithSeverity.ERROR:
-				case MessageWithSeverity.FATAL:
+				case Diagnostic.ERROR:
+				case Diagnostic.FATAL:
 					errorCount++;
 			}
 		}

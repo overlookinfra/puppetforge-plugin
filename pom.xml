@@ -26,8 +26,28 @@
 		</developer>
 	</developers>
 
+	<repositories>
+		<repository>
+			<id>repo.jenkins-ci.org</id>
+			<url>http://repo.jenkins-ci.org/public/</url>
+		</repository>
+	</repositories>
+	<pluginRepositories>
+		<pluginRepository>
+			<id>repo.jenkins-ci.org</id>
+			<url>http://repo.jenkins-ci.org/public/</url>
+		</pluginRepository>
+	</pluginRepositories>
+
 	<build>
 		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.jenkins-ci.tools</groupId>
 				<artifactId>maven-hpi-plugin</artifactId>
@@ -36,6 +56,50 @@
 				</configuration>
 			</plugin>
 		</plugins>
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.apache.maven.plugins</groupId>
+										<artifactId>maven-enforcer-plugin</artifactId>
+										<versionRange>[1.0,)</versionRange>
+										<goals>
+											<goal>display-info</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.gmaven</groupId>
+										<artifactId>gmaven-plugin</artifactId>
+										<versionRange>[1.3,)</versionRange>
+										<goals>
+											<goal>generateTestStubs</goal>
+											<goal>testCompile</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 	</build>
 
 	<dependencies>
@@ -48,16 +112,41 @@
 		<dependency>
 			<groupId>org.cloudsmith.geppetto</groupId>
 			<artifactId>org.cloudsmith.geppetto.forge.api</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>3.0.3-rc2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cloudsmith.geppetto</groupId>
+			<artifactId>org.cloudsmith.geppetto.diagnostic</artifactId>
+			<version>3.0.3-rc2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.cloudsmith.geppetto</groupId>
 			<artifactId>org.cloudsmith.geppetto.forge</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>3.0.3-rc2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>com.cloudsmith.hammer</groupId>
-			<artifactId>com.cloudsmith.hammer.puppet.validation</artifactId>
+			<groupId>org.cloudsmith.geppetto</groupId>
+			<artifactId>org.cloudsmith.geppetto.ruby.jrubyparser</artifactId>
+			<version>3.0.3-rc2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cloudsmith.geppetto</groupId>
+			<artifactId>org.cloudsmith.geppetto.graph</artifactId>
+			<version>3.0.3-rc2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cloudsmith.geppetto</groupId>
+			<artifactId>org.cloudsmith.geppetto.pp.dsl</artifactId>
+			<version>3.0.3-rc2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cloudsmith.geppetto</groupId>
+			<artifactId>org.cloudsmith.geppetto.validation</artifactId>
+			<version>3.0.3-rc2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.cloudsmith.graph</groupId>
+			<artifactId>org.cloudsmith.graph</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
@@ -73,7 +162,7 @@
 		<dependency>
 			<groupId>org.cloudsmith.geppetto</groupId>
 			<artifactId>org.cloudsmith.geppetto.puppetlint</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>3.0.3-rc2-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 </project>

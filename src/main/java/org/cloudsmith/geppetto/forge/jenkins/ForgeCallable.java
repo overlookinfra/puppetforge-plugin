@@ -15,41 +15,43 @@ import hudson.FilePath.FileCallable;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
+import java.util.Collection;
 
-import org.cloudsmith.geppetto.forge.impl.MetadataImpl;
-import org.cloudsmith.geppetto.forge.v2.Forge;
-import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
+import org.cloudsmith.geppetto.diagnostic.Diagnostic;
+import org.cloudsmith.geppetto.forge.Forge;
+import org.cloudsmith.geppetto.forge.ForgePreferences;
+import org.cloudsmith.geppetto.forge.ForgeService;
+import org.cloudsmith.geppetto.forge.util.ModuleUtils;
+import org.cloudsmith.geppetto.forge.v2.model.Metadata;
 import org.eclipse.jgit.storage.file.FileRepository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+
+import com.google.inject.Injector;
+import com.google.inject.Module;
 
 public abstract class ForgeCallable<T> implements FileCallable<T> {
 	private static final long serialVersionUID = -3048930993120683688L;
 
-	public static final String IMPORTED_MODULES_ROOT = "importedModules";
-
 	public static final String BUILD_DIR = ".geppetto";
 
-	public static final Pattern DEFAULT_EXCLUDES_PATTERN;
+	public static final String IMPORTED_MODULES_ROOT = "importedModules";
 
-	static {
-		int top = MetadataImpl.DEFAULT_EXCLUDES.length;
-		String[] excludes = new String[top + 1];
-		System.arraycopy(MetadataImpl.DEFAULT_EXCLUDES, 0, excludes, 0, top);
-		excludes[top] = BUILD_DIR;
-		DEFAULT_EXCLUDES_PATTERN = MetadataImpl.compileExcludePattern(excludes);
+	public static boolean isParentOrEqual(File dir, File subdir) {
+		if(dir == null || subdir == null)
+			return false;
+
+		return dir.equals(subdir) || isParentOrEqual(dir, subdir.getParentFile());
 	}
-
-	private transient Forge forge;
-
-	private transient File repositoryDir;
 
 	private transient File buildDir;
 
+	private transient Injector injector;
+
 	private transient FileRepository localRepository;
+
+	private transient File repositoryDir;
 
 	private ForgePreferences forgePreferences;
 
@@ -66,35 +68,10 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		this.branchName = branchName;
 	}
 
-	private boolean findModuleFiles(File[] files, List<File> moduleFiles) {
-		if(files != null) {
-			int idx = files.length;
-			while(--idx >= 0)
-				if("Modulefile".equals(files[idx].getName()))
-					return true;
+	abstract Injector createInjector(Module module);
 
-			idx = files.length;
-			while(--idx >= 0) {
-				File file = files[idx];
-				String name = file.getName();
-				if(DEFAULT_EXCLUDES_PATTERN.matcher(name).matches())
-					continue;
-
-				if(findModuleFiles(file.listFiles(), moduleFiles))
-					moduleFiles.add(file);
-			}
-		}
-		return false;
-	}
-
-	protected List<File> findModuleRoots() {
-		// Scan for valid directories containing "Modulefile" files.
-
-		List<File> moduleRoots = new ArrayList<File>();
-		if(findModuleFiles(repositoryDir.listFiles(), moduleRoots))
-			// The repository is a module in itself
-			moduleRoots.add(repositoryDir);
-		return moduleRoots;
+	protected Collection<File> findModuleRoots() {
+		return getForge().findModuleRoots(getRepositoryDir(), getFileFilter());
 	}
 
 	public String getBranchName() {
@@ -105,10 +82,29 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		return buildDir;
 	}
 
-	protected synchronized Forge getForge() {
-		if(forge == null)
-			forge = new Forge(forgePreferences);
-		return forge;
+	/**
+	 * Returns an exclusion filter that rejects everything beneath the build directory plus everything that
+	 * the default exclusion filter would reject.
+	 * 
+	 * @return <tt>true</tt> if the file can be accepted for inclusion
+	 */
+	protected FileFilter getFileFilter() {
+		return new FileFilter() {
+			@Override
+			public boolean accept(File file) {
+				return ModuleUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
+			}
+		};
+	}
+
+	protected Forge getForge() {
+		return getInjector().getInstance(Forge.class);
+	}
+
+	synchronized Injector getInjector() {
+		if(injector == null)
+			injector = createInjector(new ForgeService(forgePreferences).getForgeModule());
+		return injector;
 	}
 
 	protected FileRepository getLocalRepository() throws IOException {
@@ -125,6 +121,10 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 			localRepository = bld.setup().build();
 		}
 		return localRepository;
+	}
+
+	protected Metadata getModuleMetadata(File moduleDirectory, Diagnostic diag) throws IOException {
+		return getForge().createFromModuleDirectory(moduleDirectory, true, null, null, diag);
 	}
 
 	protected File getRepositoryDir() {

@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
+import org.cloudsmith.geppetto.diagnostic.Diagnostic;
 import org.kohsuke.stapler.export.ExportedBean;
 
 @ExportedBean(defaultVisibility = 999)
@@ -82,16 +83,16 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 		return getSummary(getResultDiagnostics());
 	}
 
-	protected String getSummary(List<? extends MessageWithSeverity> messages) {
+	protected String getSummary(List<? extends Diagnostic> messages) {
 		int errorCount = 0;
 		int warningCount = 0;
-		for(MessageWithSeverity msg : messages) {
+		for(Diagnostic msg : messages) {
 			switch(msg.getSeverity()) {
-				case MessageWithSeverity.WARNING:
+				case Diagnostic.WARNING:
 					warningCount++;
 					break;
-				case MessageWithSeverity.ERROR:
-				case MessageWithSeverity.FATAL:
+				case Diagnostic.ERROR:
+				case Diagnostic.FATAL:
 					errorCount++;
 			}
 		}

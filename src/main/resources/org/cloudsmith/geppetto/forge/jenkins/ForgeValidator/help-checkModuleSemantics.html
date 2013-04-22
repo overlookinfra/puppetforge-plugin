@@ -12,14 +12,7 @@
  License for the specific language governing permissions and limitations
  under the License.
 -->
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <!--
-    This Jelly script is used to produce the global configuration option.
-  -->
-  <f:section title="Puppet Forge Connection">
-    <f:entry title="Service URL" field="serviceURL"
-      description="The URL used when connecting to the Puppet Forge service">
-      <f:textbox default="http://forgeapi.puppetlabs.com"/>
-    </f:entry>
-  </f:section>
-</j:jelly>
+<div>
+  If checked, then the validator will make an attempt to resolve and install all dependencies for the modules that are
+  validated. Dependencies are resolved transitively and unresolved dependencies are considered to be validation errors.
+</div>

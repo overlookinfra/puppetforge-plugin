@@ -12,14 +12,11 @@
  License for the specific language governing permissions and limitations
  under the License.
 -->
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <!--
-    This Jelly script is used to produce the global configuration option.
-  -->
-  <f:section title="Puppet Forge Connection">
-    <f:entry title="Service URL" field="serviceURL"
-      description="The URL used when connecting to the Puppet Forge service">
-      <f:textbox default="http://forgeapi.puppetlabs.com"/>
-    </f:entry>
-  </f:section>
-</j:jelly>
+<div>
+  <p>Comma separated list of options to enable or disable when running the puppet-lint program
+  such as <code>2sp_soft_tabs, hard_tabs</code>. A line that starts with a minus sign means
+  &quot;Enable all checks but&quot; and then the list of options to disable. The list following
+  the minus sign can be empty meaning that all options should be enabled.</p>
+  <p>No puppet-lint validation will occur if this field is left empty</p>
+  <p>See <a href="http://puppet-lint.com/checks/">puppet-lint checks</a> for a full list of available options.</p>
+</div>

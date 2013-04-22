@@ -15,6 +15,8 @@ package org.cloudsmith.geppetto.forge.jenkins;
 
 import java.io.PrintStream;
 
+import org.cloudsmith.geppetto.diagnostic.Diagnostic;
+
 public class ResultWithDiagnostic<T> extends Diagnostic {
 	private static final long serialVersionUID = 1618870489419505392L;
 

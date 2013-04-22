@@ -17,53 +17,49 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
 
-import org.cloudsmith.geppetto.common.os.StreamUtil;
 import org.cloudsmith.geppetto.common.os.StreamUtil.OpenBAStream;
-import org.cloudsmith.geppetto.forge.ForgeFactory;
-import org.cloudsmith.geppetto.forge.util.JsonUtils;
-import org.cloudsmith.geppetto.forge.util.TarUtils;
-import org.cloudsmith.geppetto.forge.v2.MetadataRepository;
-import org.cloudsmith.geppetto.forge.v2.client.ForgePreferences;
-import org.cloudsmith.geppetto.forge.v2.model.Dependency;
+import org.cloudsmith.geppetto.diagnostic.Diagnostic;
+import org.cloudsmith.geppetto.diagnostic.FileDiagnostic;
+import org.cloudsmith.geppetto.forge.ForgePreferences;
 import org.cloudsmith.geppetto.forge.v2.model.Metadata;
-import org.cloudsmith.geppetto.forge.v2.model.Module;
-import org.cloudsmith.geppetto.forge.v2.model.Release;
-import org.cloudsmith.geppetto.forge.v2.service.ReleaseService;
-import org.cloudsmith.geppetto.pp.dsl.PPStandaloneSetup;
-import org.cloudsmith.geppetto.pp.dsl.target.PptpResourceUtil;
+import org.cloudsmith.geppetto.graph.DependencyGraphProducer;
+import org.cloudsmith.geppetto.graph.GithubURLHrefProducer;
+import org.cloudsmith.geppetto.graph.ProgressMonitorCancelIndicator;
+import org.cloudsmith.geppetto.graph.SVGProducer;
+import org.cloudsmith.geppetto.graph.dependency.DependencyGraphModule;
+import org.cloudsmith.geppetto.pp.dsl.target.PuppetTarget;
 import org.cloudsmith.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
+import org.cloudsmith.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import org.cloudsmith.geppetto.puppetlint.PuppetLintRunner;
 import org.cloudsmith.geppetto.puppetlint.PuppetLintRunner.Issue;
+import org.cloudsmith.geppetto.puppetlint.PuppetLintRunner.Option;
 import org.cloudsmith.geppetto.puppetlint.PuppetLintService;
+import org.cloudsmith.geppetto.ruby.RubyHelper;
+import org.cloudsmith.geppetto.ruby.jrubyparser.JRubyServices;
+import org.cloudsmith.geppetto.validation.FileType;
+import org.cloudsmith.geppetto.validation.ValidationOptions;
+import org.cloudsmith.geppetto.validation.ValidationService;
+import org.cloudsmith.geppetto.validation.impl.ValidationModule;
+import org.cloudsmith.geppetto.validation.runner.BuildResult;
+import org.cloudsmith.geppetto.validation.runner.IEncodingProvider;
+import org.cloudsmith.geppetto.validation.runner.PPDiagnosticsSetup;
+import org.cloudsmith.graph.DefaultGraphModule;
+import org.cloudsmith.graph.ICancel;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.emf.common.util.BasicDiagnostic;
 import org.eclipse.emf.common.util.URI;
 
-import com.cloudsmith.hammer.puppet.validation.DetailedDiagnosticData;
-import com.cloudsmith.hammer.puppet.validation.FileType;
-import com.cloudsmith.hammer.puppet.validation.GraphHrefType;
-import com.cloudsmith.hammer.puppet.validation.ModuleDependencyGraphOptions;
-import com.cloudsmith.hammer.puppet.validation.ValidationFactory;
-import com.cloudsmith.hammer.puppet.validation.ValidationOptions;
-import com.cloudsmith.hammer.puppet.validation.ValidationServiceDiagnosticCode;
-import com.cloudsmith.hammer.puppet.validation.graphs.SVGProducer;
-import com.cloudsmith.hammer.puppet.validation.runner.IEncodingProvider;
-import com.google.gson.Gson;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 
 public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<byte[]>> {
 	private static final long serialVersionUID = -2352185785743765350L;
@@ -72,41 +68,9 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 
 	private static final Pattern GITHUB_REPO_URL_PATTERN = Pattern.compile("github.com[/:]([^/\\s]+)/([^/\\s]+)\\.git$");
 
-	private static DiagnosticType getDiagnosticType(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
-		DiagnosticType type;
-		switch(validationDiagnostic.getCode()) {
-			case ValidationServiceDiagnosticCode.CATALOG_PARSER_VALUE:
-				type = DiagnosticType.CATALOG_PARSER;
-				break;
-			case ValidationServiceDiagnosticCode.CATALOG_VALUE:
-				type = DiagnosticType.CATALOG;
-				break;
-			case ValidationServiceDiagnosticCode.FORGE_VALUE:
-				type = DiagnosticType.FORGE;
-				break;
-			case ValidationServiceDiagnosticCode.GEPPETTO_SYNTAX_VALUE:
-				type = DiagnosticType.GEPPETTO_SYNTAX;
-				break;
-			case ValidationServiceDiagnosticCode.GEPPETTO_VALUE:
-				type = DiagnosticType.GEPPETTO;
-				break;
-			case ValidationServiceDiagnosticCode.INTERNAL_ERROR_VALUE:
-				type = DiagnosticType.INTERNAL_ERROR;
-				break;
-			case ValidationServiceDiagnosticCode.PUPPET_LINT_VALUE:
-				type = DiagnosticType.PUPPET_LINT;
-				break;
-			case ValidationServiceDiagnosticCode.RUBY_SYNTAX_VALUE:
-				type = DiagnosticType.RUBY_SYNTAX;
-				break;
-			case ValidationServiceDiagnosticCode.RUBY_VALUE:
-				type = DiagnosticType.RUBY;
-				break;
-			default:
-				type = DiagnosticType.UNKNOWN;
-		}
-		return type;
-	}
+	private transient String repositoryHrefPrefix;
+
+	static final String IMPORTED_MODULES_ROOT = "importedModules";
 
 	private static int getSeverity(Issue issue) {
 		switch(issue.getSeverity()) {
@@ -117,152 +81,101 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 		}
 	}
 
-	private static int getSeverity(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
-		int severity;
-		switch(validationDiagnostic.getSeverity()) {
-			case org.eclipse.emf.common.util.Diagnostic.ERROR:
-				severity = Diagnostic.ERROR;
-				break;
-			case org.eclipse.emf.common.util.Diagnostic.WARNING:
-				severity = Diagnostic.WARNING;
-				break;
-			case org.eclipse.emf.common.util.Diagnostic.INFO:
-				severity = Diagnostic.INFO;
-				break;
-			default:
-				severity = Diagnostic.OK;
-		}
-		return severity;
-	}
+	private boolean checkModuleSemantics;
 
-	private static String locationLabel(DetailedDiagnosticData detail) {
-		int lineNumber = detail.getLineNumber();
-		int offset = detail.getOffset();
-		int length = detail.getLength();
-		StringBuilder builder = new StringBuilder();
-		if(lineNumber > 0)
-			builder.append(lineNumber);
-		else
-			builder.append("-");
+	private boolean checkReferences;
 
-		if(offset >= 0) {
-			builder.append("(");
-			builder.append(offset);
-			if(length >= 0) {
-				builder.append(",");
-				builder.append(length);
-			}
-			builder.append(")");
-		}
-		return builder.toString();
-	}
+	private Option[] puppetLintOptions;
 
-	private transient String repositoryHrefPrefix;
+	private ComplianceLevel complianceLevel;
 
 	public ForgeValidatorCallable() {
 	}
 
-	public ForgeValidatorCallable(ForgePreferences forgePreferences, String repositoryURL, String branchName) {
+	public ForgeValidatorCallable(ForgePreferences forgePreferences, String repositoryURL, String branchName,
+			boolean checkReferences, boolean checkModuleSemantics, Option[] puppetLintOptions) {
 		super(forgePreferences, repositoryURL, branchName);
+		if(complianceLevel == null)
+			// TODO: Selectable in the UI
+			complianceLevel = ComplianceLevel.PUPPET_2_7;
+		this.checkReferences = checkReferences;
+		this.checkModuleSemantics = checkModuleSemantics;
+		this.puppetLintOptions = puppetLintOptions;
+	}
+
+	private void addGeppettoResult(Diagnostic geppettoDiag, byte[] svg, ResultWithDiagnostic<byte[]> result) {
+		result.setResult(svg);
+		for(Diagnostic child : geppettoDiag.getChildren())
+			if(child instanceof FileDiagnostic)
+				result.addChild(convertFileDiagnostic((FileDiagnostic) child));
+			else
+				result.addChild(child);
+	}
+
+	private Diagnostic convertFileDiagnostic(FileDiagnostic fd) {
+		return new ValidationDiagnostic(
+			fd.getSeverity(), fd.getType(), fd.getMessage(), repositoryHrefPrefix, getRelativePath(fd.getFile()),
+			fd.getLineNumber());
 	}
 
 	private Diagnostic convertPuppetLintDiagnostic(File moduleRoot, Issue issue) {
-		Diagnostic diagnostic = new Diagnostic();
-		diagnostic.setSeverity(getSeverity(issue));
-		diagnostic.setMessage(issue.getMessage());
-		diagnostic.setType(DiagnosticType.PUPPET_LINT);
-		diagnostic.setSource(getRepositoryHrefPrefix());
-		diagnostic.setResourcePath(getRelativePath(new File(moduleRoot, issue.getPath())));
-		diagnostic.setLocationLabel(Integer.toString(issue.getLineNumber()));
-		return diagnostic;
+		return new ValidationDiagnostic(
+			getSeverity(issue), PuppetLintService.PUPPET_LINT, issue.getMessage(), repositoryHrefPrefix,
+			getRelativePath(new File(moduleRoot, issue.getPath())), issue.getLineNumber());
 	}
 
-	private Diagnostic convertValidationDiagnostic(org.eclipse.emf.common.util.Diagnostic validationDiagnostic) {
+	@Override
+	Injector createInjector(com.google.inject.Module forgeModule) {
+		RubyHelper.setRubyServicesFactory(JRubyServices.FACTORY);
+		return Guice.createInjector(forgeModule, new ValidationModule());
+	}
 
-		Object dataObj = validationDiagnostic.getData().get(0);
-		String resourcePath = null;
-		String locationLabel = null;
-		if(dataObj instanceof DetailedDiagnosticData) {
-			DetailedDiagnosticData details = (DetailedDiagnosticData) dataObj;
-			resourcePath = details.getFile().getPath();
-			if(resourcePath != null && resourcePath.startsWith(BUILD_DIR))
-				// We don't care about warnings/errors from imported modules
-				return null;
-			locationLabel = locationLabel(details);
+	private void geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result)
+			throws IOException {
+
+		Diagnostic geppettoDiag = new Diagnostic();
+		Collection<File> importedModuleLocations = null;
+		List<Metadata> metadatas = new ArrayList<Metadata>();
+		for(File moduleRoot : moduleLocations) {
+			Metadata md = getModuleMetadata(moduleRoot, geppettoDiag);
+			if(md != null)
+				metadatas.add(md);
 		}
 
-		Diagnostic diagnostic = new Diagnostic();
-		diagnostic.setSeverity(getSeverity(validationDiagnostic));
-		diagnostic.setType(getDiagnosticType(validationDiagnostic));
-		diagnostic.setMessage(validationDiagnostic.getMessage());
-		diagnostic.setSource(getRepositoryHrefPrefix());
-		diagnostic.setResourcePath(resourcePath);
-		diagnostic.setLocationLabel(locationLabel);
-		return diagnostic;
-	}
+		if(geppettoDiag.getSeverity() == Diagnostic.ERROR) {
+			addGeppettoResult(geppettoDiag, null, result);
+			return;
+		}
 
-	private File downloadAndInstall(ReleaseService releaseService, File modulesRoot,
-			ResultWithDiagnostic<byte[]> result, Release release) throws IOException {
-		OpenBAStream content = new OpenBAStream();
-		Module module = release.getModule();
-		releaseService.download(module.getOwner().getUsername(), module.getName(), release.getVersion(), content);
-		File moduleDir = new File(modulesRoot, module.getName());
-		TarUtils.unpack(new GZIPInputStream(content.getInputStream()), moduleDir, false);
-		return moduleDir;
-	}
+		if(checkModuleSemantics) {
+			File importedModulesDir = new File(getBuildDir(), IMPORTED_MODULES_ROOT);
+			importedModuleLocations = getForge().downloadDependencies(metadatas, importedModulesDir, geppettoDiag);
+		}
+		if(importedModuleLocations == null)
+			importedModuleLocations = Collections.emptyList();
 
-	private void geppettoValidation(List<File> moduleLocations, List<File> importedModuleLocations,
-			ResultWithDiagnostic<byte[]> result) throws IOException {
-
-		BasicDiagnostic diagnostics = new BasicDiagnostic();
-
-		OpenBAStream dotStream = new OpenBAStream();
-
-		ModuleDependencyGraphOptions graphOptions = getDependencyGraphOptions(dotStream, importedModuleLocations);
 		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations);
-		options.setDependencyGraphOptions(graphOptions);
+		new PPDiagnosticsSetup(complianceLevel, options.getProblemsAdvisor()).createInjectorAndDoEMFRegistration();
 
-		ValidationFactory.eINSTANCE.createValidationService().validate(
-			diagnostics, getRepositoryDir(), options,
+		BuildResult buildResult = getValidationService().validate(
+			geppettoDiag, getRepositoryDir(), options,
 			importedModuleLocations.toArray(new File[importedModuleLocations.size()]), new NullProgressMonitor());
 
-		for(org.eclipse.emf.common.util.Diagnostic diagnostic : diagnostics.getChildren()) {
-			Diagnostic diag = convertValidationDiagnostic(diagnostic);
-			if(diag != null)
-				result.addChild(diag);
+		byte[] svg = null;
+		if(checkModuleSemantics) {
+			OpenBAStream dotStream = new OpenBAStream();
+			ICancel cancel = new ProgressMonitorCancelIndicator(new NullProgressMonitor(), 1);
+			getGraphProducer().produceGraph(
+				cancel, "", moduleLocations.toArray(new File[moduleLocations.size()]), dotStream, buildResult);
+			svg = produceSVG(dotStream.getInputStream());
 		}
-		result.setResult(produceSVG(dotStream.getInputStream()));
+		addGeppettoResult(geppettoDiag, svg, result);
 	}
 
-	private ModuleDependencyGraphOptions getDependencyGraphOptions(OutputStream dotStream, List<File> moduleLocations)
-			throws IOException {
-		// Assume service API
-		ModuleDependencyGraphOptions graphOptions = ValidationFactory.eINSTANCE.createModuleDependencyGraphOptions();
-
-		String hrefPrefix = getRepositoryHrefPrefix();
-		if(hrefPrefix != null) {
-			graphOptions.setGraphHrefPrefix(hrefPrefix);
-			graphOptions.setGraphHrefType(GraphHrefType.GITHUB);
-		}
-
-		graphOptions.setDotStream(dotStream);
-		graphOptions.setModulesToGraph(moduleLocations.toArray(new File[moduleLocations.size()]));
-
-		graphOptions.setTitle("");
-		return graphOptions;
-	}
-
-	private Metadata getModuleMetadata(File moduleDirectory) throws IOException {
-		StringWriter writer = new StringWriter();
-		try {
-			Gson gson = JsonUtils.getGSon();
-			gson.toJson(ForgeFactory.eINSTANCE.createForgeService().loadModule(moduleDirectory), writer);
-		}
-		finally {
-			StreamUtil.close(writer);
-		}
-		Gson gson = getForge().createGson();
-		return gson.fromJson(writer.toString(), Metadata.class);
+	public DependencyGraphProducer getGraphProducer() {
+		return getInjector().createChildInjector(
+			new DependencyGraphModule(GithubURLHrefProducer.class, getRepositoryHrefPrefix())).getInstance(
+			DependencyGraphProducer.class);
 	}
 
 	private String getRelativePath(File file) {
@@ -288,22 +201,7 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 				: repositoryHrefPrefix;
 	}
 
-	private ValidationOptions getValidationOptions(List<File> moduleLocations, List<File> importedModuleLocations) {
-		ValidationOptions options = ValidationFactory.eINSTANCE.createValidationOptions();
-		options.setCheckLayout(true);
-		options.setCheckModuleSemantics(true);
-		options.setCheckReferences(true);
-		options.setFileType(FileType.PUPPET_ROOT);
-
-		// TODO: Selectable in the UI
-		options.setPlatformURI(PptpResourceUtil.getPuppet_2_7_19());
-
-		options.setEncodingProvider(new IEncodingProvider() {
-			public String getEncoding(URI file) {
-				return UTF_8.name();
-			}
-		});
-
+	private String getSearchPath(Collection<File> moduleLocations, Collection<File> importedModuleLocations) {
 		StringBuilder searchPath = new StringBuilder();
 
 		searchPath.append("lib/*:environments/$environment/*");
@@ -313,73 +211,62 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 
 		for(File importedModuleLocation : importedModuleLocations)
 			searchPath.append(":" + getRelativePath(importedModuleLocation) + "/*");
+		return searchPath.toString();
+	}
 
-		options.setSearchPath(searchPath.toString());
+	public SVGProducer getSVGProducer() {
+		return getInjector().createChildInjector(new DefaultGraphModule()).getInstance(SVGProducer.class);
+	}
+
+	private ValidationOptions getValidationOptions(Collection<File> moduleLocations,
+			Collection<File> importedModuleLocations) {
+		ValidationOptions options = new ValidationOptions();
+		options.setCheckLayout(true);
+		options.setCheckModuleSemantics(checkModuleSemantics);
+		options.setCheckReferences(checkReferences);
+
+		if(moduleLocations.size() == 1 && getRepositoryDir().equals(moduleLocations.iterator().next()))
+			options.setFileType(FileType.MODULE_ROOT);
+		else
+			options.setFileType(FileType.PUPPET_ROOT);
+
+		options.setPlatformURI(PuppetTarget.forComplianceLevel(complianceLevel, false).getPlatformURI());
+		options.setEncodingProvider(new IEncodingProvider() {
+			public String getEncoding(URI file) {
+				return UTF_8.name();
+			}
+		});
+
+		options.setSearchPath(getSearchPath(moduleLocations, importedModuleLocations));
 		options.setProblemsAdvisor(new DefaultPotentialProblemsAdvisor());
 		return options;
+	}
+
+	ValidationService getValidationService() {
+		return getInjector().getInstance(ValidationService.class);
 	}
 
 	@Override
 	public ResultWithDiagnostic<byte[]> invoke(VirtualChannel channel) throws IOException, InterruptedException {
 
 		ResultWithDiagnostic<byte[]> result = new ResultWithDiagnostic<byte[]>();
-		List<File> moduleRoots = findModuleRoots();
+		Collection<File> moduleRoots = findModuleRoots();
 		if(moduleRoots.isEmpty()) {
-			result.addChild(new Diagnostic(Diagnostic.ERROR, "No modules found in repository"));
+			result.addChild(new Diagnostic(
+				Diagnostic.ERROR, ValidationService.GEPPETTO, "No modules found in repository"));
 			return result;
 		}
 
-		PPStandaloneSetup.doSetup();
-		MetadataRepository metadataRepo = getForge().createMetadataRepository();
-
-		List<Metadata> metadatas = new ArrayList<Metadata>();
-		for(File moduleRoot : moduleRoots) {
-			Metadata metadata = getModuleMetadata(moduleRoot);
-			if(metadataRepo.resolve(metadata.getName(), metadata.getVersion()) != null) {
-				Diagnostic diag = new Diagnostic(Diagnostic.WARNING, "Module " + metadata.getName() + ':' +
-						metadata.getVersion() + " has already been published");
-				diag.setIssue(ForgeValidator.ALREADY_PUBLISHED);
-				diag.setResourcePath(moduleRoot.getAbsolutePath());
-				result.addChild(diag);
-			}
-			metadatas.add(metadata);
-		}
-
-		Set<Dependency> unresolvedCollector = new HashSet<Dependency>();
-		Set<Release> releasesToDownload = resolveDependencies(metadataRepo, metadatas, unresolvedCollector);
-		for(Dependency unresolved : unresolvedCollector)
-			result.addChild(new Diagnostic(Diagnostic.WARNING, String.format(
-				"Unable to resolve dependency: %s:%s", unresolved.getName(),
-				unresolved.getVersionRequirement().toString())));
-
-		List<File> importedModuleRoots;
-		if(!releasesToDownload.isEmpty()) {
-			File importedModulesDir = new File(getBuildDir(), IMPORTED_MODULES_ROOT);
-			importedModulesDir.mkdirs();
-			importedModuleRoots = new ArrayList<File>();
-
-			ReleaseService releaseService = getForge().createReleaseService();
-			for(Release release : releasesToDownload) {
-				result.addChild(new Diagnostic(Diagnostic.INFO, "Installing dependent module " + release.getFullName() +
-						':' + release.getVersion()));
-				importedModuleRoots.add(downloadAndInstall(releaseService, importedModulesDir, result, release));
-			}
-		}
-		else {
-			importedModuleRoots = Collections.emptyList();
-			if(unresolvedCollector.isEmpty())
-				result.addChild(new Diagnostic(Diagnostic.INFO, "No addtional dependencies were detected"));
-		}
-
-		geppettoValidation(moduleRoots, importedModuleRoots, result);
-		lintValidation(moduleRoots, result);
+		geppettoValidation(moduleRoots, result);
+		if(puppetLintOptions != null)
+			lintValidation(moduleRoots, result);
 		return result;
 	}
 
-	private void lintValidation(List<File> moduleLocations, Diagnostic result) throws IOException {
+	private void lintValidation(Collection<File> moduleLocations, Diagnostic result) throws IOException {
 		PuppetLintRunner runner = PuppetLintService.getInstance().getPuppetLintRunner();
 		for(File moduleRoot : moduleLocations) {
-			for(PuppetLintRunner.Issue issue : runner.run(moduleRoot)) {
+			for(PuppetLintRunner.Issue issue : runner.run(moduleRoot, puppetLintOptions)) {
 				Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, issue);
 				if(diag != null)
 					result.addChild(diag);
@@ -389,32 +276,7 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 
 	private byte[] produceSVG(InputStream dotStream) throws IOException {
 		ByteArrayOutputStream svgStream = new ByteArrayOutputStream();
-		new SVGProducer().produceSVG(dotStream, svgStream, false, new NullProgressMonitor());
+		getSVGProducer().produceSVG(dotStream, svgStream, false, new NullProgressMonitor());
 		return svgStream.toByteArray();
-	}
-
-	private Set<Release> resolveDependencies(MetadataRepository metadataRepo, List<Metadata> metadatas,
-			Set<Dependency> unresolvedCollector) throws IOException {
-		// Resolve missing dependencies
-		Set<Dependency> deps = new HashSet<Dependency>();
-		for(Metadata metadata : metadatas)
-			deps.addAll(metadata.getDependencies());
-
-		// Remove the dependencies that appoints modules that we have in the workspace
-		Iterator<Dependency> depsItor = deps.iterator();
-		nextDep: while(depsItor.hasNext()) {
-			Dependency dep = depsItor.next();
-			for(Metadata metadata : metadatas)
-				if(dep.matches(metadata)) {
-					depsItor.remove();
-					continue nextDep;
-				}
-		}
-
-		// Resolve remaining dependencies
-		Set<Release> releasesToDownload = new HashSet<Release>();
-		for(Dependency dep : deps)
-			releasesToDownload.addAll(metadataRepo.deepResolve(dep, unresolvedCollector));
-		return releasesToDownload;
 	}
 }
