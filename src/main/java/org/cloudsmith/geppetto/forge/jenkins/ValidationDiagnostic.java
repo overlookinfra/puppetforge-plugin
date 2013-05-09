@@ -1,14 +1,10 @@
-/**
- * Copyright (c) 2012 Cloudsmith Inc. and other contributors, as listed below.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * 
- * Contributors:
- *   Cloudsmith
- * 
- */
+/*******************************************************************
+ * Copyright (c) 2013, Cloudsmith Inc.
+ * The code, documentation and other materials contained herein
+ * are the sole and exclusive property of Cloudsmith Inc. and may
+ * not be disclosed, used, modified, copied or distributed without
+ * prior written consent or license from Cloudsmith Inc.
+ ******************************************************************/
 package org.cloudsmith.geppetto.forge.jenkins;
 
 import org.cloudsmith.geppetto.diagnostic.Diagnostic;

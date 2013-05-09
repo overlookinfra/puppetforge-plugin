@@ -1,14 +1,10 @@
-/**
- * Copyright (c) 2012 Cloudsmith Inc. and other contributors, as listed below.
- * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the Eclipse Public License v1.0
- * which accompanies this distribution, and is available at
- * http://www.eclipse.org/legal/epl-v10.html
- * 
- * Contributors:
- *   Cloudsmith
- * 
- */
+/*******************************************************************
+ * Copyright (c) 2013, Cloudsmith Inc.
+ * The code, documentation and other materials contained herein
+ * are the sole and exclusive property of Cloudsmith Inc. and may
+ * not be disclosed, used, modified, copied or distributed without
+ * prior written consent or license from Cloudsmith Inc.
+ ******************************************************************/
 package org.cloudsmith.geppetto.forge.jenkins;
 
 import hudson.remoting.VirtualChannel;
@@ -105,7 +101,7 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 
 	private void addGeppettoResult(Diagnostic geppettoDiag, byte[] svg, ResultWithDiagnostic<byte[]> result) {
 		result.setResult(svg);
-		for(Diagnostic child : geppettoDiag.getChildren())
+		for(Diagnostic child : geppettoDiag)
 			if(child instanceof FileDiagnostic)
 				result.addChild(convertFileDiagnostic((FileDiagnostic) child));
 			else
@@ -166,7 +162,7 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 			OpenBAStream dotStream = new OpenBAStream();
 			ICancel cancel = new ProgressMonitorCancelIndicator(new NullProgressMonitor(), 1);
 			getGraphProducer().produceGraph(
-				cancel, "", moduleLocations.toArray(new File[moduleLocations.size()]), dotStream, buildResult);
+				cancel, "", moduleLocations.toArray(new File[moduleLocations.size()]), dotStream, buildResult, result);
 			svg = produceSVG(dotStream.getInputStream());
 		}
 		addGeppettoResult(geppettoDiag, svg, result);

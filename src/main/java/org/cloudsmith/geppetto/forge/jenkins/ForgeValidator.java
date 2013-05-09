@@ -1,3 +1,10 @@
+/*******************************************************************
+ * Copyright (c) 2013, Cloudsmith Inc.
+ * The code, documentation and other materials contained herein
+ * are the sole and exclusive property of Cloudsmith Inc. and may
+ * not be disclosed, used, modified, copied or distributed without
+ * prior written consent or license from Cloudsmith Inc.
+ ******************************************************************/
 package org.cloudsmith.geppetto.forge.jenkins;
 
 import hudson.Extension;
@@ -46,8 +53,8 @@ public class ForgeValidator extends Builder {
 	 * marked as public so that it can be accessed from views.
 	 * 
 	 * <p>
-	 * See <tt>src/main/resources/org/cloudsmith/geppetto/jenkins/ForgeValidator/*.jelly</tt> for the actual HTML fragment for the configuration
-	 * screen.
+	 * See <tt>src/main/resources/org/cloudsmith/geppetto/jenkins/ForgeValidator/*.jelly</tt> for the actual HTML fragment for the
+	 * configuration screen.
 	 */
 	@Extension
 	// This indicates to Jenkins that this is an implementation of an extension
@@ -123,11 +130,7 @@ public class ForgeValidator extends Builder {
 	static ForgePreferencesBean getForgePreferences() {
 		ForgePreferencesBean prefsBean = new ForgePreferencesBean();
 		DescriptorImpl desc = (DescriptorImpl) Jenkins.getInstance().getDescriptorOrDie(ForgeValidator.class);
-		String serviceURL = desc.getServiceURL();
-		if(!serviceURL.endsWith("/"))
-			serviceURL += "/";
-		prefsBean.setOAuthURL(serviceURL + "oauth/token");
-		prefsBean.setBaseURL(serviceURL + "v2/");
+		prefsBean.setBaseURL(desc.getServiceURL());
 		return prefsBean;
 	}
 
@@ -283,7 +286,7 @@ public class ForgeValidator extends Builder {
 			prefsBean, repository, branchName, checkReferences, checkModuleSemantics, options));
 
 		// Emit non-validation diagnostics to the console
-		Iterator<Diagnostic> diagIter = result.getChildren().iterator();
+		Iterator<Diagnostic> diagIter = result.iterator();
 		while(diagIter.hasNext()) {
 			Diagnostic diag = diagIter.next();
 			if(!(diag instanceof ValidationDiagnostic)) {
