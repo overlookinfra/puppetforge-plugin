@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (c) 2014 Puppet Labs, Inc. and other contributors, as listed below.
+ All rights reserved. This program and the accompanying materials
+ are made available under the terms of the Eclipse Public License v1.0
+ which accompanies this distribution, and is available at
+ http://www.eclipse.org/legal/epl-v10.html
+ 
+ Contributors:
+   Puppet Labs
+ -->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<l:layout title="Puppet Forge Validation">
+		<st:include page="sidepanel.jelly" it="${it.build}"/>
+		<l:main-panel>
+			<h1>${it.title}</h1>
+			<j:choose>
+				<j:when test="${it.validationGraphURL != null}">
+					<a href="${it.validationGraphURL}" target="_blank">Dependency Graph</a>
+				</j:when>
+				<j:otherwise>
+					No dependency graph was generated
+				</j:otherwise>
+			</j:choose>
+			<br/>
+			<h2>Diagnostics</h2>
+			<j:choose>
+				<j:when test="${it.resultDiagnosticsCount != 0}">
+					<table id="validationDiagnosticsTable" border="1px" class="pane sortable" style="table-layout:fixed;">
+						<thead>
+							<tr>
+								<td class="pane-header" style="width:60px">Severity</td>
+								<td class="pane-header" style="width:85px">Type</td>
+								<td class="pane-header">Description</td>
+								<td class="pane-header" style="width:45%">Location</td>
+							</tr>
+						</thead>
+						<tbody>
+							<j:forEach var="diag" items="${it.resultDiagnostics}">
+								<j:if test="${diag.path != null}">
+									<tr>
+										<td style="overflow:hidden">${diag.severityString}</td>
+										<td style="overflow:hidden">${diag.type.name}</td>
+										<td style="overflow:hidden;text-overflow:ellipsis">${diag.message}</td>
+										<td style="overflow:hidden;text-overflow:ellipsis">
+											<j:choose>
+												<j:when test="${diag.line != 0}">
+													<a href="${diag.hrefPrefix}/${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
+												</j:when>
+												<j:otherwise>
+													<a href="${diag.hrefPrefix}/${diag.path}" target="_blank">${diag.path}</a>
+												</j:otherwise>
+											</j:choose>
+										</td>
+									</tr>
+								</j:if>
+							</j:forEach>
+						</tbody>
+					</table>
+				</j:when>
+				<j:otherwise>The validation did not produce any diagnostics</j:otherwise>
+			</j:choose>
+		</l:main-panel>
+	</l:layout>
+</j:jelly>

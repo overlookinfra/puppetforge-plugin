@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright (c) 2014 Puppet Labs, Inc. and other contributors, as listed below.
+ All rights reserved. This program and the accompanying materials
+ are made available under the terms of the Eclipse Public License v1.0
+ which accompanies this distribution, and is available at
+ http://www.eclipse.org/legal/epl-v10.html
+ 
+ Contributors:
+   Puppet Labs
+ -->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<l:layout title="${it.title}">
+		<st:include page="sidepanel.jelly" it="${it.build}"/>
+		<l:main-panel>
+			<h1>${it.title}</h1>
+			<j:choose>
+				<j:when test="${it.resultDiagnosticsCount != 0}">
+					<table id="publicationResultTable" border="1px" class="pane sortable" style="table-layout:fixed;">
+						<thead>
+							<tr>
+								<td class="pane-header" style="width:60px">Severity</td>
+								<td class="pane-header">Description</td>
+							</tr>
+						</thead>
+						<tbody>
+							<j:forEach var="diag" items="${it.resultDiagnostics}">
+								<tr>
+									<td style="overflow:hidden">${diag.severityString}</td>
+									<td style="overflow:hidden;text-overflow:ellipsis">${diag.message}</td>
+								</tr>
+							</j:forEach>
+						</tbody>
+					</table>
+				</j:when>
+				<j:otherwise>There were no publication results</j:otherwise>
+			</j:choose>
+		</l:main-panel>
+	</l:layout>
+</j:jelly>

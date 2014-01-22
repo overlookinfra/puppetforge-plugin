@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?jelly escape-by-default='true'?>
 <!--
  Copyright (c) 2014 Puppet Labs, Inc. and other contributors, as listed below.
  All rights reserved. This program and the accompanying materials
@@ -9,9 +9,7 @@
  Contributors:
    Puppet Labs
  -->
-<!--
-  This view is used to render the installed plugins page.
--->
-<div>
-  Validates and publishes Puppet Modules to the Puppet Forge.
-</div>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <l:task icon="${h.getIconFilePath(action)}" title="${action.title}"
+                href="${h.getActionUrl(it.url,action)}" />
+</j:jelly>

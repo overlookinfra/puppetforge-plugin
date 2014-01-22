@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright (c) 2013, Cloudsmith Inc.
-  The code, documentation and other materials contained herein
-  are the sole and exclusive property of Cloudsmith Inc. and may
-  not be disclosed, used, modified, copied or distributed without
-  prior written consent or license from Cloudsmith Inc.
+ Copyright (c) 2014 Puppet Labs, Inc. and other contributors, as listed below.
+ All rights reserved. This program and the accompanying materials
+ are made available under the terms of the Eclipse Public License v1.0
+ which accompanies this distribution, and is available at
+ http://www.eclipse.org/legal/epl-v10.html
+ 
+ Contributors:
+   Puppet Labs
  -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
@@ -15,7 +18,7 @@
 		<version>1.490</version>
 	</parent>
 
-	<groupId>org.cloudsmith.geppetto</groupId>
+	<groupId>com.puppetlabs.geppetto</groupId>
 	<artifactId>puppetforge</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>hpi</packaging>
@@ -30,7 +33,7 @@
 		<developer>
 			<id>thallgren</id>
 			<name>Thomas Hallgren</name>
-			<email>thomas@tada.se</email>
+			<email>thomas.hallgren@puppetlabs.com</email>
 		</developer>
 	</developers>
 
@@ -114,48 +117,48 @@
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>[4.10,5.0)</version>
+			<version>4.11</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.forge.api</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.forge.api</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.diagnostic</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.diagnostic</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.forge</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.forge</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.ruby.jrubyparser</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.ruby.jrubyparser</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.graph</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.graph</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.pp.dsl</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.pp.dsl</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.validation</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.validation</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.graph</groupId>
-			<artifactId>org.cloudsmith.graph</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<groupId>com.puppetlabs.graph</groupId>
+			<artifactId>com.puppetlabs.graph</artifactId>
+			<version>1.0.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jenkinsci.plugins</groupId>
@@ -168,9 +171,59 @@
 			<version>2.0.0.201206130900-r</version>
 		</dependency>
 		<dependency>
-			<groupId>org.cloudsmith.geppetto</groupId>
-			<artifactId>org.cloudsmith.geppetto.puppetlint</artifactId>
-			<version>3.0.3-rc2-SNAPSHOT</version>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.puppetlint</artifactId>
+			<version>4.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.core</groupId>
+			<artifactId>org.eclipse.core.runtime</artifactId>
+			<version>3.9.0-v20130326-1255</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.core</groupId>
+			<artifactId>org.eclipse.core.contenttype</artifactId>
+			<version>3.4.200-v20130326-1255</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.core</groupId>
+			<artifactId>org.eclipse.core.jobs</artifactId>
+			<version>3.5.300-v20130429-1813</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.emf</groupId>
+			<artifactId>org.eclipse.emf.ecore.xmi</artifactId>
+			<version>2.9.1-v20130827-0309</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.equinox</groupId>
+			<artifactId>org.eclipse.equinox.app</artifactId>
+			<version>1.3.100-v20130327-1442</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.equinox</groupId>
+			<artifactId>org.eclipse.equinox.common</artifactId>
+			<version>3.6.200-v20130402-1505</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.equinox</groupId>
+			<artifactId>org.eclipse.equinox.preferences</artifactId>
+			<version>3.5.100-v20130422-1538</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.equinox</groupId>
+			<artifactId>org.eclipse.equinox.registry</artifactId>
+			<version>3.5.301-v20130717-1549</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.osgi</groupId>
+			<artifactId>org.eclipse.osgi</artifactId>
+			<version>3.9.1-v20130814-1242</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.xtext</groupId>
+			<artifactId>org.eclipse.xtext.util</artifactId>
+			<version>2.4.3-v201309030823</version>
 		</dependency>
 	</dependencies>
 </project>
