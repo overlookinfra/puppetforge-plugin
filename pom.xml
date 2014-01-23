@@ -28,7 +28,33 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.net.id>thhal</java.net.id>
 		<geppetto.version>4.1.0-SNAPSHOT</geppetto.version>
+		<nexusServer>https://geppetto-nexus.puppetlabs.com</nexusServer>
 	</properties>
+
+	<scm>
+		<connection>scm:git:git://github.com/puppetlabs/puppetforge-plugin.git</connection>
+		<url>https://github.com/puppetlabs/puppetforge-plugin</url>
+		<developerConnection>scm:git:git@github.com:puppetlabs/puppetforge-plugin.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+
+	<distributionManagement>
+		<repository>
+			<id>puppetlabs</id>
+			<name>Puppet Labs Release Repository</name>
+			<url>${nexusServer}/content/repositories/releases/</url>
+		</repository>
+		<snapshotRepository>
+			<id>puppetlabs</id>
+			<name>Puppet Labs Snapshot Repository</name>
+			<url>${nexusServer}/content/repositories/snapshots/</url>
+		</snapshotRepository>
+		<site>
+			<id>geppetto-site</id>
+			<name>Geppetto Site Repository</name>
+			<url>dav:${parentSiteURL}</url>
+		</site>
+	</distributionManagement>
 
 	<developers>
 		<developer>
