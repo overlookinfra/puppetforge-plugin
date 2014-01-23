@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.eclipse.jgit.storage.file.FileRepository;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import com.google.inject.Guice;
@@ -51,7 +51,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 
 	private transient Injector injector;
 
-	private transient FileRepository localRepository;
+	private transient Repository localRepository;
 
 	private transient File repositoryDir;
 
@@ -114,7 +114,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		return injector;
 	}
 
-	protected FileRepository getLocalRepository() throws IOException {
+	protected Repository getLocalRepository() throws IOException {
 		if(localRepository == null) {
 			File guessGitDir = new File(getRepositoryDir(), ".git");
 			boolean bare = !guessGitDir.isDirectory();

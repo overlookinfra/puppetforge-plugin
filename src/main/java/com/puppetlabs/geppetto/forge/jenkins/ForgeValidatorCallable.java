@@ -30,6 +30,7 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 
 import com.google.inject.Module;
+import com.puppetlabs.geppetto.common.os.FileUtils;
 import com.puppetlabs.geppetto.common.os.StreamUtil.OpenBAStream;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.FileDiagnostic;
@@ -252,6 +253,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	public ResultWithDiagnostic<byte[]> invoke(VirtualChannel channel) throws IOException, InterruptedException {
 
 		ResultWithDiagnostic<byte[]> result = new ResultWithDiagnostic<byte[]>();
+		FileUtils.rmR(getBuildDir());
 		Collection<File> moduleRoots = findModuleRoots(result);
 		if(moduleRoots.isEmpty()) {
 			result.addChild(new Diagnostic(

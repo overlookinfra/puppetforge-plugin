@@ -13,6 +13,7 @@ package com.puppetlabs.geppetto.forge.jenkins;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -39,8 +40,8 @@ import net.sf.json.JSONObject;
 
 import org.eclipse.jgit.lib.ConfigConstants;
 import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.StoredConfig;
-import org.eclipse.jgit.storage.file.FileRepository;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -92,8 +93,9 @@ public class ForgeValidator extends Builder {
 
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
+			serviceURL = Util.fixEmptyAndTrim(formData.getString("serviceURL"));
 			save();
-			return super.configure(req, formData);
+			return true;
 		}
 
 		public FormValidation doCheckServiceURL(@QueryParameter String value) throws IOException, ServletException {
@@ -153,7 +155,7 @@ public class ForgeValidator extends Builder {
 	 * @return The URL or <code>null</code> if it hasn't been configured
 	 *         for the given branch.
 	 */
-	public static String getRemoteURL(FileRepository repository) throws IOException {
+	public static String getRemoteURL(Repository repository) throws IOException {
 		StoredConfig repoConfig = repository.getConfig();
 		String configuredRemote = repoConfig.getString(
 			ConfigConstants.CONFIG_BRANCH_SECTION, repository.getBranch(), ConfigConstants.CONFIG_KEY_REMOTE);

@@ -15,7 +15,7 @@
 	<parent>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>plugin</artifactId>
-		<version>1.490</version>
+		<version>1.548</version>
 	</parent>
 
 	<groupId>com.puppetlabs.geppetto</groupId>
@@ -27,6 +27,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.net.id>thhal</java.net.id>
+		<geppetto.version>4.1.0-SNAPSHOT</geppetto.version>
 	</properties>
 
 	<developers>
@@ -123,37 +124,42 @@
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.forge.api</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
+			<version>${geppetto.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.diagnostic</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
+			<version>${geppetto.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.forge</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>com.puppetlabs.geppetto</groupId>
-			<artifactId>com.puppetlabs.geppetto.ruby.jrubyparser</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
+			<version>${geppetto.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.graph</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
+			<version>${geppetto.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.pp.dsl</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
+			<version>${geppetto.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.puppetlint</artifactId>
+			<version>${geppetto.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.puppetlabs.geppetto</groupId>
+			<artifactId>com.puppetlabs.geppetto.ruby.jrubyparser</artifactId>
+			<version>${geppetto.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.validation</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
+			<version>${geppetto.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.graph</groupId>
@@ -164,16 +170,6 @@
 			<groupId>org.jenkinsci.plugins</groupId>
 			<artifactId>git</artifactId>
 			<version>1.1.26</version>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jgit</groupId>
-			<artifactId>org.eclipse.jgit</artifactId>
-			<version>2.0.0.201206130900-r</version>
-		</dependency>
-		<dependency>
-			<groupId>com.puppetlabs.geppetto</groupId>
-			<artifactId>com.puppetlabs.geppetto.puppetlint</artifactId>
-			<version>4.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.core</groupId>
@@ -224,6 +220,11 @@
 			<groupId>org.eclipse.xtext</groupId>
 			<artifactId>org.eclipse.xtext.util</artifactId>
 			<version>2.4.3-v201309030823</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jgit</groupId>
+			<artifactId>org.eclipse.jgit</artifactId>
+			<version>3.1.0.201310021548-r</version>
 		</dependency>
 	</dependencies>
 </project>
