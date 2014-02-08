@@ -26,11 +26,11 @@ import com.puppetlabs.geppetto.forge.Forge;
 import com.puppetlabs.geppetto.forge.client.OAuthModule;
 
 public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -4124246662292755617L;
 
-	private static final String FORGE_CLIENT_ID = "369b60d6b2a54d693a8a6383ff961ffec2200bb61945677db24845ea32eb2722";
+	private static final String FORGE_CLIENT_ID = "cac18b1f07f13a244c47644548b29cbbe58048f3aaccdeefa7c0306467afda44";
 
-	private static final String FORGE_CLIENT_SECRET = "22a2b9bb3c120520b31d876b4abc4a5846953d519421ba057d06a56d92c53e1e";
+	private static final String FORGE_CLIENT_SECRET = "2227c9a7392382f58b5e4d084b705827cb574673ff7d2a5905ef21685fd48e40";
 
 	private String forgeLogin;
 
@@ -39,8 +39,9 @@ public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
 	public ForgePublisherCallable() {
 	}
 
-	public ForgePublisherCallable(String forgeLogin, String forgePassword, String repositoryURL, String branchName) {
-		super(repositoryURL, branchName);
+	public ForgePublisherCallable(String forgeLogin, String forgePassword, String forgeServiceURL,
+			String repositoryURL, String branchName) {
+		super(forgeServiceURL, repositoryURL, branchName);
 		this.forgeLogin = forgeLogin;
 		this.forgePassword = forgePassword;
 	}
@@ -82,7 +83,7 @@ public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
 		List<File> tarBalls = new ArrayList<File>();
 		Forge forge = getForge(result);
 		for(File moduleRoot : moduleRoots)
-			tarBalls.add(forge.build(moduleRoot, builtModules, getFileFilter(), null, null, result));
+			tarBalls.add(forge.build(moduleRoot, builtModules, null, null, null, result));
 
 		getForgeService(result).publishAll(tarBalls.toArray(new File[tarBalls.size()]), false, result);
 		return result;

@@ -37,14 +37,8 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	private final AbstractBuild<?, ?> build;
 
-	private final String branchName;
-
-	private final String repositoryURL;
-
-	public ValidationResult(AbstractBuild<?, ?> build, String repositoryURL, String branchName) {
+	public ValidationResult(AbstractBuild<?, ?> build) {
 		this.build = build;
-		this.repositoryURL = repositoryURL;
-		this.branchName = branchName;
 	}
 
 	@Override
@@ -92,10 +86,6 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return new Api(this);
 	}
 
-	public String getBranchName() {
-		return branchName;
-	}
-
 	public AbstractBuild<?, ?> getBuild() {
 		return build;
 	}
@@ -110,10 +100,6 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	public String getLargeIconFileName() {
 		return "/plugin/puppetforge/icons/puppetlabs-48x48.png";
-	}
-
-	public String getRepositoryURL() {
-		return repositoryURL;
 	}
 
 	public byte[] getResult() {

@@ -59,7 +59,7 @@ import com.puppetlabs.geppetto.validation.runner.PPDiagnosticsSetup;
 import com.puppetlabs.graph.ICancel;
 
 public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagnostic<byte[]>> {
-	private static final long serialVersionUID = -2352185785743765350L;
+	private static final long serialVersionUID = -5597025638204256583L;
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
 
@@ -89,12 +89,11 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	public ForgeValidatorCallable() {
 	}
 
-	public ForgeValidatorCallable(String repositoryURL, String branchName, boolean checkReferences,
-			boolean checkModuleSemantics, Option[] puppetLintOptions) {
-		super(repositoryURL, branchName);
-		if(complianceLevel == null)
-			// TODO: Selectable in the UI
-			complianceLevel = ComplianceLevel.PUPPET_2_7;
+	public ForgeValidatorCallable(String forgeServiceURL, String repositoryURL, String branchName,
+			ComplianceLevel complianceLevel, boolean checkReferences, boolean checkModuleSemantics,
+			Option[] puppetLintOptions) {
+		super(forgeServiceURL, repositoryURL, branchName);
+		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
 		this.checkModuleSemantics = checkModuleSemantics;
 		this.puppetLintOptions = puppetLintOptions;

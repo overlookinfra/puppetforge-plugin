@@ -68,12 +68,22 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 	}
 
 	protected void addModules(Diagnostic diagnostic, List<Module> modules) {
-		modules.add(new ForgeModule());
+		modules.add(new ForgeModule() {
+			@Override
+			public FileFilter getFileFilter() {
+				return new FileFilter() {
+					@Override
+					public boolean accept(File file) {
+						return ModuleUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
+					}
+				};
+			}
+		});
 		modules.add(getCommonModule());
 	}
 
 	protected Collection<File> findModuleRoots(Diagnostic diag) {
-		return getForge(diag).findModuleRoots(getRepositoryDir(), getFileFilter());
+		return getForge(diag).findModuleRoots(getRepositoryDir(), null);
 	}
 
 	public String getBranchName() {
@@ -82,21 +92,6 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 
 	protected File getBuildDir() {
 		return buildDir;
-	}
-
-	/**
-	 * Returns an exclusion filter that rejects everything beneath the build directory plus everything that
-	 * the default exclusion filter would reject.
-	 * 
-	 * @return <tt>true</tt> if the file can be accepted for inclusion
-	 */
-	protected FileFilter getFileFilter() {
-		return new FileFilter() {
-			@Override
-			public boolean accept(File file) {
-				return ModuleUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
-			}
-		};
 	}
 
 	protected Forge getForge(Diagnostic diag) {

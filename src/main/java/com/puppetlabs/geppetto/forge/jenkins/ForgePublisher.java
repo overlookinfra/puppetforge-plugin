@@ -10,51 +10,62 @@
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_URL;
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.getRepositoryInfo;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.matrix.MatrixAggregatable;
 import hudson.matrix.MatrixAggregator;
 import hudson.matrix.MatrixRun;
 import hudson.matrix.MatrixBuild;
 import hudson.model.BuildListener;
-import hudson.model.Result;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.plugins.git.GitSCM;
 import hudson.scm.SCM;
 import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Publisher;
-import hudson.tasks.Recorder;
+import hudson.tasks.Builder;
+import hudson.util.FormValidation;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.Serializable;
 import java.util.List;
 
+import javax.servlet.ServletException;
+
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
+import com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.RepositoryInfo;
 
-public class ForgePublisher extends Recorder implements Serializable, MatrixAggregatable {
-	@Extension(ordinal = -1)
-	public static class DescriptorImpl extends BuildStepDescriptor<Publisher> {
+public class ForgePublisher extends Builder {
+
+	@Extension
+	public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
+		public FormValidation doCheckForgeServiceURL(@QueryParameter String value) throws IOException, ServletException {
+			return checkURL(value);
+		}
 
 		@Override
 		public String getDisplayName() {
 			return "Publish Puppet Module";
 		}
 
+		/**
+		 * @return the default Forge Service URL
+		 */
+		public String getForgeServiceURL() {
+			return FORGE_SERVICE_URL;
+		}
+
+		@SuppressWarnings("rawtypes")
 		@Override
-		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> aClass) {
-			// Indicates that this builder can be used with all kinds of project
-			// types
+		public boolean isApplicable(Class<? extends AbstractProject> jobType) {
 			return true;
 		}
 	}
-
-	private static final long serialVersionUID = 1L;
 
 	private static void info(BuildListener listener, String fmt, Object... args) {
 		PrintStream out = listener.getLogger();
@@ -71,9 +82,14 @@ public class ForgePublisher extends Recorder implements Serializable, MatrixAggr
 
 	private final String forgePassword;
 
+	private final String forgeServiceURL;
+
 	@DataBoundConstructor
-	public ForgePublisher(Boolean publishOnlyIfNoWarnings, String forgeOAuthToken, String forgeLogin,
-			String forgePassword) {
+	public ForgePublisher(Boolean publishOnlyIfNoWarnings, String forgeOAuthToken, String forgeServiceURL,
+			String forgeLogin, String forgePassword) {
+		this.forgeServiceURL = forgeServiceURL == null
+				? FORGE_SERVICE_URL
+				: forgeServiceURL;
 		this.publishOnlyIfNoWarnings = publishOnlyIfNoWarnings == null
 				? false
 				: publishOnlyIfNoWarnings.booleanValue();
@@ -106,8 +122,8 @@ public class ForgePublisher extends Recorder implements Serializable, MatrixAggr
 		return forgePassword;
 	}
 
-	public BuildStepMonitor getRequiredMonitorService() {
-		return BuildStepMonitor.BUILD;
+	public String getForgeServiceURL() {
+		return forgeServiceURL;
 	}
 
 	public boolean isPublishOnlyIfNoWarnings() {
@@ -118,21 +134,14 @@ public class ForgePublisher extends Recorder implements Serializable, MatrixAggr
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, final BuildListener listener)
 			throws InterruptedException, IOException {
 
-		final Result buildResult = build.getResult();
-		if(buildResult.isWorseThan(Result.UNSTABLE))
-			// Silently ignore this post-build step
-			return true; // Error not caused here
+		RepositoryInfo repoInfo = getRepositoryInfo(build, listener);
+		if(repoInfo == null)
+			return false;
 
 		// during matrix build, the push back would happen at the very end only once for the whole matrix,
 		// not for individual configuration build.
 		if(build instanceof MatrixRun)
 			return true;
-
-		List<ValidationResult> validationResults = build.getActions(ValidationResult.class);
-		if(validationResults.isEmpty()) {
-			info(listener, "No Puppet Validation Result was found so no pushing will occur.");
-			return true; // Error not caused here
-		}
 
 		SCM scm = build.getProject().getScm();
 		if(!(scm instanceof GitSCM)) {
@@ -142,25 +151,30 @@ public class ForgePublisher extends Recorder implements Serializable, MatrixAggr
 
 		GitSCM git = (GitSCM) scm;
 		FilePath gitRoot = git.getModuleRoot(build.getWorkspace(), build);
-		if(validationResults.size() > 1)
-			info(listener, "Got multiple Puppet Validation Results. I'm using the first one.");
 
-		ValidationResult validationResult = validationResults.get(0);
-		int severity = validationResult.getSeverity();
-		if(severity >= Diagnostic.ERROR) {
-			// This should normally never happen since the build result should have been worse
-			// than stable and trapped above.
-			info(listener, "Validation of %s has errors so no pushing will occur.", gitRoot.getName());
-			return true; // Error not caused here
-		}
+		ValidationResult validationResult = null;
+		List<ValidationResult> validationResults = build.getActions(ValidationResult.class);
+		if(!validationResults.isEmpty()) {
+			if(validationResults.size() > 1)
+				info(listener, "Got multiple Puppet Validation Results. I'm using the first one.");
 
-		if(severity == Diagnostic.WARNING && publishOnlyIfNoWarnings) {
-			listener.error("Validation of %s has warnings so no pushing will occur.", gitRoot.getName());
-			return false; // Fail the build here
+			validationResult = validationResults.get(0);
+			int severity = validationResult.getSeverity();
+			if(severity >= Diagnostic.ERROR) {
+				// This should normally never happen since the build result should have been worse
+				// than stable and trapped above.
+				info(listener, "Validation of %s has errors so no pushing will occur.", gitRoot.getName());
+				return true; // Error not caused here
+			}
+
+			if(severity == Diagnostic.WARNING && publishOnlyIfNoWarnings) {
+				listener.error("Validation of %s has warnings so no pushing will occur.", gitRoot.getName());
+				return false; // Fail the build here
+			}
 		}
 
 		Diagnostic publishingResult = gitRoot.act(new ForgePublisherCallable(
-			forgeLogin, forgePassword, validationResult.getRepositoryURL(), validationResult.getBranchName()));
+			forgeLogin, forgePassword, forgeServiceURL, repoInfo.repositoryURL, repoInfo.branchName));
 		for(Diagnostic diag : publishingResult)
 			listener.getLogger().println(diag);
 

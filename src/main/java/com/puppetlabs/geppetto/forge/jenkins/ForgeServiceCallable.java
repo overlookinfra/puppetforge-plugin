@@ -21,11 +21,14 @@ import com.puppetlabs.geppetto.forge.impl.ForgeServiceModule;
 public abstract class ForgeServiceCallable<T extends Diagnostic> extends ForgeCallable<T> {
 	private static final long serialVersionUID = 1L;
 
+	private String forgeServiceURL;
+
 	public ForgeServiceCallable() {
 	}
 
-	public ForgeServiceCallable(String repositoryURL, String branchName) {
+	public ForgeServiceCallable(String forgeServiceURL, String repositoryURL, String branchName) {
 		super(repositoryURL, branchName);
+		this.forgeServiceURL = forgeServiceURL;
 	}
 
 	@Override
@@ -34,7 +37,7 @@ public abstract class ForgeServiceCallable<T extends Diagnostic> extends ForgeCa
 		modules.add(new ForgeHttpModule() {
 			@Override
 			protected String getBaseURL() {
-				return ForgeValidator.getForgeServiceURL();
+				return forgeServiceURL;
 			}
 		});
 		modules.add(new ForgeServiceModule());
