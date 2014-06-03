@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -25,6 +25,7 @@ import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 
 @ExportedBean(defaultVisibility = 999)
 public class PublicationResult implements Action, Serializable, Cloneable {
+	private static final long serialVersionUID = -8730291291869073474L;
 
 	private final Diagnostic diagnostic;
 
