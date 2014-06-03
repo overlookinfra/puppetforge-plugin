@@ -18,8 +18,8 @@ import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Descriptor;
 import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -30,13 +30,17 @@ import java.util.Iterator;
 
 import javax.servlet.ServletException;
 
+import jenkins.model.Jenkins;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.RepositoryInfo;
+import com.puppetlabs.geppetto.forge.jenkins.ProblemsAdvisor.ProblemsAdvisorDescriptor;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
+import com.puppetlabs.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Option;
 
@@ -85,6 +89,10 @@ public class ForgeValidator extends Builder {
 		 */
 		public String getForgeServiceURL() {
 			return FORGE_SERVICE_URL;
+		}
+
+		public Descriptor<ProblemsAdvisor> getProblemsAdvisorDescriptor() {
+			return Jenkins.getInstance().getDescriptorByType(ProblemsAdvisorDescriptor.class);
 		}
 
 		@SuppressWarnings("rawtypes")
@@ -164,13 +172,16 @@ public class ForgeValidator extends Builder {
 
 	private final boolean checkModuleSemantics;
 
+	private final ProblemsAdvisor problemsAdvisor;
+
 	private final Option[] puppetLintOptions;
 
 	private final String forgeServiceURL;
 
 	@DataBoundConstructor
 	public ForgeValidator(String forgeServiceURL, ComplianceLevel complianceLevel, Boolean checkReferences,
-			Boolean checkModuleSemantics, String puppetLintOptions) throws FormValidation {
+			Boolean checkModuleSemantics, ProblemsAdvisor problemsAdvisor, String puppetLintOptions)
+			throws FormValidation {
 		this.forgeServiceURL = forgeServiceURL == null
 				? FORGE_SERVICE_URL
 				: forgeServiceURL;
@@ -183,6 +194,7 @@ public class ForgeValidator extends Builder {
 		this.checkModuleSemantics = checkModuleSemantics == null
 				? false
 				: checkModuleSemantics.booleanValue();
+		this.problemsAdvisor = problemsAdvisor;
 
 		if(puppetLintOptions != null) {
 			puppetLintOptions = puppetLintOptions.trim();
@@ -200,19 +212,14 @@ public class ForgeValidator extends Builder {
 		return forgeServiceURL;
 	}
 
-	public Option[] getPuppetLintOptions() {
-		return puppetLintOptions;
+	public ProblemsAdvisor getProblemsAdvisor() {
+		return problemsAdvisor == null
+				? new ProblemsAdvisor(new DefaultPotentialProblemsAdvisor())
+				: problemsAdvisor;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see hudson.tasks.BuildStep#getRequiredMonitorService()
-	 */
-	@Override
-	public BuildStepMonitor getRequiredMonitorService() {
-		// TODO Auto-generated method stub
-		return null;
+	public Option[] getPuppetLintOptions() {
+		return puppetLintOptions;
 	}
 
 	public boolean isCheckModuleSemantics() {
@@ -234,7 +241,7 @@ public class ForgeValidator extends Builder {
 		boolean validationErrors = false;
 		ResultWithDiagnostic<byte[]> result = repoInfo.gitRoot.act(new ForgeValidatorCallable(
 			forgeServiceURL, repoInfo.repositoryURL, repoInfo.branchName, complianceLevel, checkReferences,
-			checkModuleSemantics, puppetLintOptions));
+			checkModuleSemantics, problemsAdvisor, puppetLintOptions));
 
 		// Emit non-validation diagnostics to the console
 		Iterator<Diagnostic> diagIter = result.iterator();

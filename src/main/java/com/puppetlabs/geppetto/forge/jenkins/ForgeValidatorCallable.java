@@ -41,7 +41,7 @@ import com.puppetlabs.geppetto.graph.ProgressMonitorCancelIndicator;
 import com.puppetlabs.geppetto.graph.SVGProducer;
 import com.puppetlabs.geppetto.graph.dependency.DependencyGraphModule;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
-import com.puppetlabs.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
+import com.puppetlabs.geppetto.pp.dsl.validation.IPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Issue;
@@ -84,6 +84,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private Option[] puppetLintOptions;
 
+	private IPotentialProblemsAdvisor problemsAdvisor;
+
 	private ComplianceLevel complianceLevel;
 
 	public ForgeValidatorCallable() {
@@ -91,11 +93,12 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	public ForgeValidatorCallable(String forgeServiceURL, String repositoryURL, String branchName,
 			ComplianceLevel complianceLevel, boolean checkReferences, boolean checkModuleSemantics,
-			Option[] puppetLintOptions) {
+			IPotentialProblemsAdvisor problemsAdvisor, Option[] puppetLintOptions) {
 		super(forgeServiceURL, repositoryURL, branchName);
 		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
 		this.checkModuleSemantics = checkModuleSemantics;
+		this.problemsAdvisor = problemsAdvisor;
 		this.puppetLintOptions = puppetLintOptions;
 	}
 
@@ -240,7 +243,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		});
 
 		options.setSearchPath(getSearchPath(moduleLocations, importedModuleLocations));
-		options.setProblemsAdvisor(new DefaultPotentialProblemsAdvisor());
+		options.setProblemsAdvisor(problemsAdvisor);
 		return options;
 	}
 

@@ -1,0 +1,47 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry field="assignmentToVarNamedString" title="${%Assignment to $string}">
+    <f:select default="${descriptor.defaults.assignmentToVarNamedString}"/>
+  </f:entry>
+  <f:entry field="assignmentToVarNamedTrusted" title="${%Assignment to $trusted}">
+    <f:select default="${descriptor.defaults.assignmentToVarNamedTrusted}"/>
+  </f:entry>
+  <f:entry field="booleansInStringForm" title="${%Strings containing &quot;false&quot; or &quot;true&quot;}">
+    <f:select default="${descriptor.defaults.booleansInStringForm}"/>
+  </f:entry>
+  <f:entry field="caseDefaultShouldAppearLast" title="${%Case statement where a 'default' is not last}">
+    <f:select default="${descriptor.defaults.caseDefaultShouldAppearLast}"/>
+  </f:entry>
+  <f:entry field="circularDependencyPreference" title="${%Circular Module Dependency}">
+    <f:select default="${descriptor.defaults.circularDependencyPreference}"/>
+  </f:entry>
+  <f:entry field="dqStringNotRequired" title="${%Strings that do not require double quoting}">
+    <f:select default="${descriptor.defaults.dqStringNotRequired}"/>
+  </f:entry>
+  <f:entry field="dqStringNotRequiredVariable" title="${%Strings containing a single interpolation}">
+    <f:select default="${descriptor.defaults.dqStringNotRequiredVariable}"/>
+  </f:entry>
+  <f:entry field="ensureShouldAppearFirstInResource" title="${%Resource property ensure is not stated first}">
+    <f:select default="${descriptor.defaults.ensureShouldAppearFirstInResource}"/>
+  </f:entry>
+  <f:entry field="interpolatedNonBraceEnclosedHyphens" title="${%Interpolated hyphen without surrounding {}}">
+    <f:select default="${descriptor.defaults.interpolatedNonBraceEnclosedHyphens}"/>
+  </f:entry>
+  <f:entry field="missingDefaultInSelector" title="${%Missing 'default' in selector}">
+    <f:select default="${descriptor.defaults.missingDefaultInSelector}"/>
+  </f:entry>
+  <f:entry field="mlComments" title="${%Comments using /* */}">
+    <f:select default="${descriptor.defaults.mlComments}"/>
+  </f:entry>
+  <f:entry field="rightToLeftRelationships" title="${%Right to left relationships using &lt;- or &lt;~}">
+    <f:select default="${descriptor.defaults.rightToLeftRelationships}"/>
+  </f:entry>
+  <f:entry field="selectorDefaultShouldAppearLast" title="${%Selector expression where a 'default' is not last}">
+    <f:select default="${descriptor.defaults.selectorDefaultShouldAppearLast}"/>
+  </f:entry>
+  <f:entry field="unbracedInterpolation" title="${%Interpolated variables without braces}">
+    <f:select default="${descriptor.defaults.unbracedInterpolation}"/>
+  </f:entry>
+  <f:entry field="unquotedResourceTitles" title="${%Unquoted resource titles}">
+    <f:select default="${descriptor.defaults.unquotedResourceTitles}"/>
+  </f:entry>
+</j:jelly>
