@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -34,18 +34,18 @@ import com.puppetlabs.geppetto.forge.model.Metadata;
 import com.puppetlabs.geppetto.forge.util.ModuleUtils;
 
 public abstract class ForgeCallable<T> implements FileCallable<T> {
-	private static final long serialVersionUID = -3048930993120683688L;
-
-	public static final String BUILD_DIR = ".geppetto";
-
-	public static final String IMPORTED_MODULES_ROOT = "importedModules";
-
 	public static boolean isParentOrEqual(File dir, File subdir) {
 		if(dir == null || subdir == null)
 			return false;
 
 		return dir.equals(subdir) || isParentOrEqual(dir, subdir.getParentFile());
 	}
+
+	private static final long serialVersionUID = -3048930993120683688L;
+
+	public static final String BUILD_DIR = ".geppetto";
+
+	public static final String IMPORTED_MODULES_ROOT = "importedModules";
 
 	private transient File buildDir;
 
@@ -126,7 +126,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 	}
 
 	protected Metadata getModuleMetadata(File moduleDirectory, Diagnostic diag) throws IOException {
-		return getForge(diag).createFromModuleDirectory(moduleDirectory, true, null, null, diag);
+		return getForge(diag).createFromModuleDirectory(moduleDirectory, null, null, diag);
 	}
 
 	protected File getRepositoryDir() {

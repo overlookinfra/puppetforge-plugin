@@ -1,0 +1,38 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry field="circularDependency" title="${%Circular module dependencies}">
+    <f:select default="${descriptor.defaults.circularDependency}"/>
+  </f:entry>
+  <f:entry field="dependencyVersionMismatch" title="${%Dependency Version Mismatch}">
+    <f:select default="${descriptor.defaults.dependencyVersionMismatch}"/>
+  </f:entry>
+  <f:entry field="deprecatedKey" title="${%Deprecated metadata key}">
+    <f:select default="${descriptor.defaults.deprecatedKey}"/>
+  </f:entry>
+  <f:entry field="missingForgeRequiredFields" title="${%Missing fields required by Puppet Forge}">
+    <f:select default="${descriptor.defaults.missingForgeRequiredFields}"/>
+  </f:entry>
+  <f:entry field="moduleNameNotStrict" title="${%Module Name not Strictly Correct}">
+    <f:select default="${descriptor.defaults.moduleNameNotStrict}"/>
+  </f:entry>
+  <f:entry field="moduleRedefinition" title="${%Module is Redefined}">
+    <f:select default="${descriptor.defaults.moduleRedefinition}"/>
+  </f:entry>
+  <f:entry field="modulefileExists" title="${%Deprecated Modulefile Exists}">
+    <f:select default="${descriptor.defaults.modulefileExists}"/>
+  </f:entry>
+  <f:entry field="modulefileExistsAndIsUsed" title="${%Deprecated Modulefile is used}">
+    <f:select default="${descriptor.defaults.modulefileExistsAndIsUsed}"/>
+  </f:entry>
+  <f:entry field="unexpectedSubmodule" title="${%Unexpected Submodule Directory}">
+    <f:select default="${descriptor.defaults.unexpectedSubmodule}"/>
+  </f:entry>
+  <f:entry field="unrecognizedKey" title="${%Unrecognized metadata key}">
+    <f:select default="${descriptor.defaults.unrecognizedKey}"/>
+  </f:entry>
+  <f:entry field="unresolvedReference" title="${%Unresolved Module Reference}">
+    <f:select default="${descriptor.defaults.unresolvedReference}"/>
+  </f:entry>
+  <f:entry field="whitespaceInTag" title="${%Tag Contains Whitespace}">
+    <f:select default="${descriptor.defaults.whitespaceInTag}"/>
+  </f:entry>
+</j:jelly>

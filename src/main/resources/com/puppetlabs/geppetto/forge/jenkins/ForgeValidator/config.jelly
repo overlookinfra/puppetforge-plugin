@@ -21,12 +21,25 @@
     <f:select default="${descriptor.complianceLevel}"/>
   </f:entry>
 
-  <f:entry field="checkReferences" title="${%Validate Module Cross References}">
+  <f:entry field="checkModuleSemantics" title="${%Validate Module Semantics}">
+    <f:checkbox default="true"/>
+  </f:entry>
+
+  <f:entry field="checkReferences" title="${%Validate Cross References}">
     <f:checkbox default="true"/>
   </f:entry>
 
   <f:section title="Advanced Project Options">
     <f:advanced>
+      <f:block><h4>Module Validation Preferences</h4></f:block>
+      <f:property field="moduleValidationAdvisor">
+         <j:scope>
+            <j:set var="descriptor" value="${descriptor.moduleValidationAdvisorDescriptor}"/>
+            <j:set var="instance" value="${instance.moduleValidationAdvisor}"/>
+            <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
+         </j:scope>
+      </f:property>
+      <f:block><h4>PP Validation Preferences</h4></f:block>
       <f:property field="problemsAdvisor">
          <j:scope>
             <j:set var="descriptor" value="${descriptor.problemsAdvisorDescriptor}"/>
@@ -34,6 +47,7 @@
             <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
          </j:scope>
       </f:property>
+	  <f:block><h4>Linting</h4></f:block>
       <f:entry title="${%Puppet-lint Options}" field="puppetLintOptions">
         <f:textbox />
       </f:entry>

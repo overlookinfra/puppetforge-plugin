@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -40,6 +40,7 @@ import com.puppetlabs.geppetto.graph.GithubURLHrefProducer;
 import com.puppetlabs.geppetto.graph.ProgressMonitorCancelIndicator;
 import com.puppetlabs.geppetto.graph.SVGProducer;
 import com.puppetlabs.geppetto.graph.dependency.DependencyGraphModule;
+import com.puppetlabs.geppetto.module.dsl.validation.IModuleValidationAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
@@ -59,6 +60,15 @@ import com.puppetlabs.geppetto.validation.runner.PPDiagnosticsSetup;
 import com.puppetlabs.graph.ICancel;
 
 public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagnostic<byte[]>> {
+	private static int getSeverity(Issue issue) {
+		switch(issue.getSeverity()) {
+			case ERROR:
+				return Diagnostic.ERROR;
+			default:
+				return Diagnostic.WARNING;
+		}
+	}
+
 	private static final long serialVersionUID = -5597025638204256583L;
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
@@ -69,15 +79,6 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	static final String IMPORTED_MODULES_ROOT = "importedModules";
 
-	private static int getSeverity(Issue issue) {
-		switch(issue.getSeverity()) {
-			case ERROR:
-				return Diagnostic.ERROR;
-			default:
-				return Diagnostic.WARNING;
-		}
-	}
-
 	private boolean checkModuleSemantics;
 
 	private boolean checkReferences;
@@ -86,6 +87,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private IPotentialProblemsAdvisor problemsAdvisor;
 
+	private IModuleValidationAdvisor moduleValidationAdvisor;
+
 	private ComplianceLevel complianceLevel;
 
 	public ForgeValidatorCallable() {
@@ -93,12 +96,14 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	public ForgeValidatorCallable(String forgeServiceURL, String repositoryURL, String branchName,
 			ComplianceLevel complianceLevel, boolean checkReferences, boolean checkModuleSemantics,
-			IPotentialProblemsAdvisor problemsAdvisor, Option[] puppetLintOptions) {
+			IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
+			Option[] puppetLintOptions) {
 		super(forgeServiceURL, repositoryURL, branchName);
 		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
 		this.checkModuleSemantics = checkModuleSemantics;
 		this.problemsAdvisor = problemsAdvisor;
+		this.moduleValidationAdvisor = moduleValidationAdvisor;
 		this.puppetLintOptions = puppetLintOptions;
 	}
 
@@ -160,8 +165,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		new PPDiagnosticsSetup(complianceLevel, options.getProblemsAdvisor()).createInjectorAndDoEMFRegistration();
 
 		BuildResult buildResult = getValidationService(geppettoDiag).validate(
-			geppettoDiag, getRepositoryDir(), options,
-			importedModuleLocations.toArray(new File[importedModuleLocations.size()]), new NullProgressMonitor());
+			geppettoDiag, options, getRepositoryDir(), new NullProgressMonitor());
 
 		byte[] svg = null;
 		if(checkModuleSemantics) {
@@ -215,7 +219,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			searchPath.append(":" + getRelativePath(moduleLocation) + "/*");
 
 		for(File importedModuleLocation : importedModuleLocations)
-			searchPath.append(":" + getRelativePath(importedModuleLocation) + "/*");
+			searchPath.append(":" + importedModuleLocation + "/*");
 		return searchPath.toString();
 	}
 
@@ -244,6 +248,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 		options.setSearchPath(getSearchPath(moduleLocations, importedModuleLocations));
 		options.setProblemsAdvisor(problemsAdvisor);
+		options.setModuleValidationAdvisor(moduleValidationAdvisor);
 		return options;
 	}
 

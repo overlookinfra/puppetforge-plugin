@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -16,9 +16,6 @@ import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.getRepositoryIn
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.matrix.MatrixAggregator;
-import hudson.matrix.MatrixRun;
-import hudson.matrix.MatrixBuild;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -98,18 +95,6 @@ public class ForgePublisher extends Builder {
 		this.forgePassword = forgePassword;
 	}
 
-	/**
-	 * For a matrix project, push should only happen once.
-	 */
-	public MatrixAggregator createAggregator(MatrixBuild build, Launcher launcher, BuildListener listener) {
-		return new MatrixAggregator(build, launcher, listener) {
-			@Override
-			public boolean endBuild() throws InterruptedException, IOException {
-				return ForgePublisher.this.perform(build, launcher, listener);
-			}
-		};
-	}
-
 	public String getForgeLogin() {
 		return forgeLogin;
 	}
@@ -137,11 +122,6 @@ public class ForgePublisher extends Builder {
 		RepositoryInfo repoInfo = getRepositoryInfo(build, listener);
 		if(repoInfo == null)
 			return false;
-
-		// during matrix build, the push back would happen at the very end only once for the whole matrix,
-		// not for individual configuration build.
-		if(build instanceof MatrixRun)
-			return true;
 
 		SCM scm = build.getProject().getScm();
 		if(!(scm instanceof GitSCM)) {
@@ -175,8 +155,6 @@ public class ForgePublisher extends Builder {
 
 		Diagnostic publishingResult = gitRoot.act(new ForgePublisherCallable(
 			forgeLogin, forgePassword, forgeServiceURL, repoInfo.repositoryURL, repoInfo.branchName));
-		for(Diagnostic diag : publishingResult)
-			listener.getLogger().println(diag);
 
 		PublicationResult data = new PublicationResult(build, publishingResult);
 		build.addAction(data);

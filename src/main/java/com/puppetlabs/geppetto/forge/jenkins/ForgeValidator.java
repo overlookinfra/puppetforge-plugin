@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -38,9 +38,9 @@ import org.kohsuke.stapler.QueryParameter;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.RepositoryInfo;
-import com.puppetlabs.geppetto.forge.jenkins.ProblemsAdvisor.ProblemsAdvisorDescriptor;
+import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
+import com.puppetlabs.geppetto.forge.jenkins.PPProblemsAdvisor.ProblemsAdvisorDescriptor;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
-import com.puppetlabs.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Option;
 
@@ -91,7 +91,11 @@ public class ForgeValidator extends Builder {
 			return FORGE_SERVICE_URL;
 		}
 
-		public Descriptor<ProblemsAdvisor> getProblemsAdvisorDescriptor() {
+		public Descriptor<ModuleValidationAdvisor> getModuleValidationAdvisorDescriptor() {
+			return Jenkins.getInstance().getDescriptorByType(ModuleValidationAdvisorDescriptor.class);
+		}
+
+		public Descriptor<PPProblemsAdvisor> getProblemsAdvisorDescriptor() {
 			return Jenkins.getInstance().getDescriptorByType(ProblemsAdvisorDescriptor.class);
 		}
 
@@ -101,8 +105,6 @@ public class ForgeValidator extends Builder {
 			return true;
 		}
 	}
-
-	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
 
 	private static Option getOption(String s) {
 		s = s.trim();
@@ -166,13 +168,17 @@ public class ForgeValidator extends Builder {
 		return options;
 	}
 
+	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
+
 	private final ComplianceLevel complianceLevel;
 
 	private final boolean checkReferences;
 
 	private final boolean checkModuleSemantics;
 
-	private final ProblemsAdvisor problemsAdvisor;
+	private final PPProblemsAdvisor problemsAdvisor;
+
+	private final ModuleValidationAdvisor moduleValidationAdvisor;
 
 	private final Option[] puppetLintOptions;
 
@@ -180,8 +186,8 @@ public class ForgeValidator extends Builder {
 
 	@DataBoundConstructor
 	public ForgeValidator(String forgeServiceURL, ComplianceLevel complianceLevel, Boolean checkReferences,
-			Boolean checkModuleSemantics, ProblemsAdvisor problemsAdvisor, String puppetLintOptions)
-			throws FormValidation {
+			Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
+			ModuleValidationAdvisor moduleValidationAdvisor, String puppetLintOptions) throws FormValidation {
 		this.forgeServiceURL = forgeServiceURL == null
 				? FORGE_SERVICE_URL
 				: forgeServiceURL;
@@ -195,6 +201,7 @@ public class ForgeValidator extends Builder {
 				? false
 				: checkModuleSemantics.booleanValue();
 		this.problemsAdvisor = problemsAdvisor;
+		this.moduleValidationAdvisor = moduleValidationAdvisor;
 
 		if(puppetLintOptions != null) {
 			puppetLintOptions = puppetLintOptions.trim();
@@ -212,9 +219,15 @@ public class ForgeValidator extends Builder {
 		return forgeServiceURL;
 	}
 
-	public ProblemsAdvisor getProblemsAdvisor() {
+	public ModuleValidationAdvisor getModuleValidationAdvisor() {
+		return moduleValidationAdvisor == null
+				? new ModuleValidationAdvisor()
+				: moduleValidationAdvisor;
+	}
+
+	public PPProblemsAdvisor getProblemsAdvisor() {
 		return problemsAdvisor == null
-				? new ProblemsAdvisor(new DefaultPotentialProblemsAdvisor())
+				? new PPProblemsAdvisor()
 				: problemsAdvisor;
 	}
 
@@ -241,7 +254,8 @@ public class ForgeValidator extends Builder {
 		boolean validationErrors = false;
 		ResultWithDiagnostic<byte[]> result = repoInfo.gitRoot.act(new ForgeValidatorCallable(
 			forgeServiceURL, repoInfo.repositoryURL, repoInfo.branchName, complianceLevel, checkReferences,
-			checkModuleSemantics, problemsAdvisor, puppetLintOptions));
+			checkModuleSemantics, getProblemsAdvisor(), getModuleValidationAdvisor().getAdvisor(),
+			getPuppetLintOptions()));
 
 		// Emit non-validation diagnostics to the console
 		Iterator<Diagnostic> diagIter = result.iterator();

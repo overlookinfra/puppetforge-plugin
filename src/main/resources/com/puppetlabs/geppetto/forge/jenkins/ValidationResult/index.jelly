@@ -32,7 +32,6 @@
 						<thead>
 							<tr>
 								<td class="pane-header" style="width:60px">Severity</td>
-								<td class="pane-header" style="width:85px">Type</td>
 								<td class="pane-header">Description</td>
 								<td class="pane-header" style="width:45%">Location</td>
 							</tr>
@@ -42,11 +41,10 @@
 								<j:if test="${diag.path != null}">
 									<tr>
 										<td style="overflow:hidden">${diag.severityString}</td>
-										<td style="overflow:hidden">${diag.type.name}</td>
 										<td style="overflow:hidden;text-overflow:ellipsis">${diag.message}</td>
 										<td style="overflow:hidden;text-overflow:ellipsis">
 											<j:choose>
-												<j:when test="${diag.line != 0}">
+												<j:when test="${diag.line > 0}">
 													<a href="${diag.hrefPrefix}/${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
 												</j:when>
 												<j:otherwise>

@@ -4,10 +4,10 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
- * 
+ *
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.DefaultPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
@@ -32,13 +33,11 @@ import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
  * A default implementation of IPotentialProblemsAdvisor that returns Warnings for all potential problems, and
  * Ignore for all stylistic problems
  */
-public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> implements ExtensionPoint, Serializable,
-		IPotentialProblemsAdvisor {
+public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor> implements ExtensionPoint,
+		Serializable, IPotentialProblemsAdvisor {
 
 	@Extension
-	public static class ProblemsAdvisorDescriptor extends Descriptor<ProblemsAdvisor> {
-		private final ProblemsAdvisor defaults = new ProblemsAdvisor(new DefaultPotentialProblemsAdvisor());
-
+	public static class ProblemsAdvisorDescriptor extends Descriptor<PPProblemsAdvisor> {
 		public ListBoxModel doFillAssignmentToVarNamedStringItems() {
 			return doFillValidationPreferenceItems(defaults.assignmentToVarNamedString());
 		}
@@ -53,10 +52,6 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 
 		public ListBoxModel doFillCaseDefaultShouldAppearLastItems() {
 			return doFillValidationPreferenceItems(defaults.caseDefaultShouldAppearLast());
-		}
-
-		public ListBoxModel doFillCircularDependencyPreferenceItems() {
-			return doFillValidationPreferenceItems(defaults.circularDependencyPreference());
 		}
 
 		public ListBoxModel doFillDqStringNotRequiredItems() {
@@ -102,11 +97,11 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 		public ListBoxModel doFillValidationPreferenceItems(ValidationPreference dflt) {
 			List<Option> items = new ArrayList<Option>();
 			for(ValidationPreference pref : ValidationPreference.values())
-				items.add(new Option(pref.toString(), pref.name()));
+				items.add(new Option(pref.toString(), pref.name(), pref == dflt));
 			return new ListBoxModel(items);
 		}
 
-		public ProblemsAdvisor getDefaults() {
+		public IPotentialProblemsAdvisor getDefaults() {
 			return defaults;
 		}
 
@@ -115,6 +110,9 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 			return "";
 		}
 	}
+
+	private static final IPotentialProblemsAdvisor defaults = PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(
+		new DefaultPotentialProblemsAdvisor());
 
 	private static final long serialVersionUID = 1L;
 
@@ -125,8 +123,6 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 	private final ValidationPreference booleansInStringForm;
 
 	private final ValidationPreference caseDefaultShouldAppearLast;
-
-	private final ValidationPreference circularDependencyPreference;
 
 	private final ValidationPreference dqStringNotRequired;
 
@@ -148,30 +144,28 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 
 	private final ValidationPreference unquotedResourceTitles;
 
-	public ProblemsAdvisor(IPotentialProblemsAdvisor a) {
-		this.assignmentToVarNamedString = a.assignmentToVarNamedString();
-		this.assignmentToVarNamedTrusted = a.assignmentToVarNamedTrusted();
-		this.booleansInStringForm = a.booleansInStringForm();
-		this.caseDefaultShouldAppearLast = a.caseDefaultShouldAppearLast();
-		this.circularDependencyPreference = a.circularDependencyPreference();
-		this.dqStringNotRequired = a.dqStringNotRequired();
-		this.dqStringNotRequiredVariable = a.dqStringNotRequiredVariable();
-		this.ensureShouldAppearFirstInResource = a.ensureShouldAppearFirstInResource();
-		this.interpolatedNonBraceEnclosedHyphens = a.interpolatedNonBraceEnclosedHyphens();
-		this.missingDefaultInSelector = a.missingDefaultInSelector();
-		this.mlComments = a.mlComments();
-		this.rightToLeftRelationships = a.rightToLeftRelationships();
-		this.selectorDefaultShouldAppearLast = a.selectorDefaultShouldAppearLast();
-		this.unbracedInterpolation = a.unbracedInterpolation();
-		this.unquotedResourceTitles = a.unquotedResourceTitles();
+	public PPProblemsAdvisor() {
+		this.assignmentToVarNamedString = defaults.assignmentToVarNamedString();
+		this.assignmentToVarNamedTrusted = defaults.assignmentToVarNamedTrusted();
+		this.booleansInStringForm = defaults.booleansInStringForm();
+		this.caseDefaultShouldAppearLast = defaults.caseDefaultShouldAppearLast();
+		this.dqStringNotRequired = defaults.dqStringNotRequired();
+		this.dqStringNotRequiredVariable = defaults.dqStringNotRequiredVariable();
+		this.ensureShouldAppearFirstInResource = defaults.ensureShouldAppearFirstInResource();
+		this.interpolatedNonBraceEnclosedHyphens = defaults.interpolatedNonBraceEnclosedHyphens();
+		this.missingDefaultInSelector = defaults.missingDefaultInSelector();
+		this.mlComments = defaults.mlComments();
+		this.rightToLeftRelationships = defaults.rightToLeftRelationships();
+		this.selectorDefaultShouldAppearLast = defaults.selectorDefaultShouldAppearLast();
+		this.unbracedInterpolation = defaults.unbracedInterpolation();
+		this.unquotedResourceTitles = defaults.unquotedResourceTitles();
 	}
 
 	@DataBoundConstructor
-	public ProblemsAdvisor(ValidationPreference assignmentToVarNamedString,
+	public PPProblemsAdvisor(ValidationPreference assignmentToVarNamedString,
 			ValidationPreference assignmentToVarNamedTrusted, ValidationPreference booleansInStringForm,
-			ValidationPreference caseDefaultShouldAppearLast, ValidationPreference circularDependencyPreference,
-			ValidationPreference dqStringNotRequired, ValidationPreference dqStringNotRequiredVariable,
-			ValidationPreference ensureShouldAppearFirstInResource,
+			ValidationPreference caseDefaultShouldAppearLast, ValidationPreference dqStringNotRequired,
+			ValidationPreference dqStringNotRequiredVariable, ValidationPreference ensureShouldAppearFirstInResource,
 			ValidationPreference interpolatedNonBraceEnclosedHyphens, ValidationPreference missingDefaultInSelector,
 			ValidationPreference mlComments, ValidationPreference rightToLeftRelationships,
 			ValidationPreference selectorDefaultShouldAppearLast, ValidationPreference unbracedInterpolation,
@@ -180,7 +174,6 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 		this.assignmentToVarNamedTrusted = assignmentToVarNamedTrusted;
 		this.booleansInStringForm = booleansInStringForm;
 		this.caseDefaultShouldAppearLast = caseDefaultShouldAppearLast;
-		this.circularDependencyPreference = circularDependencyPreference;
 		this.dqStringNotRequired = dqStringNotRequired;
 		this.dqStringNotRequiredVariable = dqStringNotRequiredVariable;
 		this.ensureShouldAppearFirstInResource = ensureShouldAppearFirstInResource;
@@ -211,11 +204,6 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 	@Override
 	public ValidationPreference caseDefaultShouldAppearLast() {
 		return caseDefaultShouldAppearLast;
-	}
-
-	@Override
-	public ValidationPreference circularDependencyPreference() {
-		return circularDependencyPreference;
 	}
 
 	@Override
@@ -259,13 +247,6 @@ public class ProblemsAdvisor extends AbstractDescribableImpl<ProblemsAdvisor> im
 	 */
 	public String getCaseDefaultShouldAppearLast() {
 		return caseDefaultShouldAppearLast.name();
-	}
-
-	/**
-	 * @return the circularDependencyPreference
-	 */
-	public String getCircularDependencyPreference() {
-		return circularDependencyPreference.name();
 	}
 
 	/**
