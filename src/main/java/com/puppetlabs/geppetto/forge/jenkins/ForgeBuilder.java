@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -45,10 +45,6 @@ abstract class ForgeBuilder {
 		}
 	}
 
-	static final String FORGE_SERVICE_URL = "https://forgeapi.puppetlabs.com";
-
-	public static final String ALREADY_PUBLISHED = "ALREADY_PUBLISHED";
-
 	static FormValidation checkURL(String value) {
 		if(value == null)
 			return FormValidation.ok();
@@ -73,7 +69,7 @@ abstract class ForgeBuilder {
 
 	/**
 	 * Obtains the remote URL that is referenced by the given <code>branchName</code>
-	 * 
+	 *
 	 * @return The URL or <code>null</code> if it hasn't been configured
 	 *         for the given branch.
 	 */
@@ -122,4 +118,8 @@ abstract class ForgeBuilder {
 		}
 		return new RepositoryInfo(repository, branchName, gitRoot);
 	}
+
+	static final String FORGE_SERVICE_URL = "https://forgeapi.puppetlabs.com";
+
+	public static final String ALREADY_PUBLISHED = "ALREADY_PUBLISHED";
 }

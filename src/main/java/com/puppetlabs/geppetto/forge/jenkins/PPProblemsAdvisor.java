@@ -66,6 +66,10 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			return doFillValidationPreferenceItems(defaults.ensureShouldAppearFirstInResource());
 		}
 
+		public ListBoxModel doFillImportIsDeprecatedItems() {
+			return doFillValidationPreferenceItems(defaults.importIsDeprecated());
+		}
+
 		public ListBoxModel doFillInterpolatedNonBraceEnclosedHyphensItems() {
 			return doFillValidationPreferenceItems(defaults.interpolatedNonBraceEnclosedHyphens());
 		}
@@ -101,6 +105,10 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			return new ListBoxModel(items);
 		}
 
+		public ListBoxModel doFillValidityAssertedAtRuntimeItems() {
+			return doFillValidationPreferenceItems(defaults.validityAssertedAtRuntime());
+		}
+
 		public IPotentialProblemsAdvisor getDefaults() {
 			return defaults;
 		}
@@ -130,6 +138,8 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 	private final ValidationPreference ensureShouldAppearFirstInResource;
 
+	private final ValidationPreference importIsDeprecated;
+
 	private final ValidationPreference interpolatedNonBraceEnclosedHyphens;
 
 	private final ValidationPreference missingDefaultInSelector;
@@ -144,6 +154,8 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 	private final ValidationPreference unquotedResourceTitles;
 
+	private final ValidationPreference validityAssertedAtRuntime;
+
 	public PPProblemsAdvisor() {
 		this.assignmentToVarNamedString = defaults.assignmentToVarNamedString();
 		this.assignmentToVarNamedTrusted = defaults.assignmentToVarNamedTrusted();
@@ -152,6 +164,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 		this.dqStringNotRequired = defaults.dqStringNotRequired();
 		this.dqStringNotRequiredVariable = defaults.dqStringNotRequiredVariable();
 		this.ensureShouldAppearFirstInResource = defaults.ensureShouldAppearFirstInResource();
+		this.importIsDeprecated = defaults.importIsDeprecated();
 		this.interpolatedNonBraceEnclosedHyphens = defaults.interpolatedNonBraceEnclosedHyphens();
 		this.missingDefaultInSelector = defaults.missingDefaultInSelector();
 		this.mlComments = defaults.mlComments();
@@ -159,6 +172,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 		this.selectorDefaultShouldAppearLast = defaults.selectorDefaultShouldAppearLast();
 		this.unbracedInterpolation = defaults.unbracedInterpolation();
 		this.unquotedResourceTitles = defaults.unquotedResourceTitles();
+		this.validityAssertedAtRuntime = defaults.validityAssertedAtRuntime();
 	}
 
 	@DataBoundConstructor
@@ -166,10 +180,11 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			ValidationPreference assignmentToVarNamedTrusted, ValidationPreference booleansInStringForm,
 			ValidationPreference caseDefaultShouldAppearLast, ValidationPreference dqStringNotRequired,
 			ValidationPreference dqStringNotRequiredVariable, ValidationPreference ensureShouldAppearFirstInResource,
-			ValidationPreference interpolatedNonBraceEnclosedHyphens, ValidationPreference missingDefaultInSelector,
-			ValidationPreference mlComments, ValidationPreference rightToLeftRelationships,
-			ValidationPreference selectorDefaultShouldAppearLast, ValidationPreference unbracedInterpolation,
-			ValidationPreference unquotedResourceTitles) {
+			ValidationPreference importIsDeprecated, ValidationPreference interpolatedNonBraceEnclosedHyphens,
+			ValidationPreference missingDefaultInSelector, ValidationPreference mlComments,
+			ValidationPreference rightToLeftRelationships, ValidationPreference selectorDefaultShouldAppearLast,
+			ValidationPreference unbracedInterpolation, ValidationPreference unquotedResourceTitles,
+			ValidationPreference validityAssertedAtRuntime) {
 		this.assignmentToVarNamedString = assignmentToVarNamedString;
 		this.assignmentToVarNamedTrusted = assignmentToVarNamedTrusted;
 		this.booleansInStringForm = booleansInStringForm;
@@ -177,6 +192,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 		this.dqStringNotRequired = dqStringNotRequired;
 		this.dqStringNotRequiredVariable = dqStringNotRequiredVariable;
 		this.ensureShouldAppearFirstInResource = ensureShouldAppearFirstInResource;
+		this.importIsDeprecated = importIsDeprecated;
 		this.interpolatedNonBraceEnclosedHyphens = interpolatedNonBraceEnclosedHyphens;
 		this.missingDefaultInSelector = missingDefaultInSelector;
 		this.mlComments = mlComments;
@@ -184,6 +200,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 		this.selectorDefaultShouldAppearLast = selectorDefaultShouldAppearLast;
 		this.unbracedInterpolation = unbracedInterpolation;
 		this.unquotedResourceTitles = unquotedResourceTitles;
+		this.validityAssertedAtRuntime = validityAssertedAtRuntime;
 	}
 
 	@Override
@@ -271,6 +288,13 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	}
 
 	/**
+	 * @return the importIsDeprecated
+	 */
+	public String getImportIsDeprecated() {
+		return importIsDeprecated.name();
+	}
+
+	/**
 	 * @return the interpolatedNonBraceEnclosedHyphens
 	 */
 	public String getInterpolatedNonBraceEnclosedHyphens() {
@@ -319,6 +343,18 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 		return unquotedResourceTitles.name();
 	}
 
+	/**
+	 * @return the validityAssertedAtRuntime
+	 */
+	public String getValidityAssertedAtRuntime() {
+		return validityAssertedAtRuntime.name();
+	}
+
+	@Override
+	public ValidationPreference importIsDeprecated() {
+		return importIsDeprecated;
+	}
+
 	@Override
 	public ValidationPreference interpolatedNonBraceEnclosedHyphens() {
 		return interpolatedNonBraceEnclosedHyphens;
@@ -352,6 +388,11 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	@Override
 	public ValidationPreference unquotedResourceTitles() {
 		return unquotedResourceTitles;
+	}
+
+	@Override
+	public ValidationPreference validityAssertedAtRuntime() {
+		return validityAssertedAtRuntime;
 	}
 
 }

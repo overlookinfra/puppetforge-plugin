@@ -20,6 +20,9 @@
   <f:entry field="ensureShouldAppearFirstInResource" title="${%Resource property ensure is not stated first}">
     <f:select default="${descriptor.defaults.ensureShouldAppearFirstInResource}"/>
   </f:entry>
+  <f:entry field="importIsDeprecated" title="${%Use of deprecated keyword 'import'}">
+    <f:select default="${descriptor.defaults.importIsDeprecated}"/>
+  </f:entry>
   <f:entry field="interpolatedNonBraceEnclosedHyphens" title="${%Interpolated hyphen without surrounding {}}">
     <f:select default="${descriptor.defaults.interpolatedNonBraceEnclosedHyphens}"/>
   </f:entry>
@@ -40,5 +43,8 @@
   </f:entry>
   <f:entry field="unquotedResourceTitles" title="${%Unquoted resource titles}">
     <f:select default="${descriptor.defaults.unquotedResourceTitles}"/>
+  </f:entry>
+  <f:entry field="validityAssertedAtRuntime" title="${%Validity cannot be asserted until runtime}">
+    <f:select default="${descriptor.defaults.validityAssertedAtRuntime}"/>
   </f:entry>
 </j:jelly>
