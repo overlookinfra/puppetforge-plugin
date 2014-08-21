@@ -119,6 +119,12 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 		}
 	}
 
+	private static String string(ValidationPreference pref) {
+		return pref == null
+				? "IGNORE"
+				: pref.name();
+	}
+
 	private static final IPotentialProblemsAdvisor defaults = PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(
 		new DefaultPotentialProblemsAdvisor());
 
@@ -242,112 +248,112 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	 * @return the assignmentToVarNamedString
 	 */
 	public String getAssignmentToVarNamedString() {
-		return assignmentToVarNamedString.name();
+		return string(assignmentToVarNamedString);
 	}
 
 	/**
 	 * @return the assignmentToVarNamedTrusted
 	 */
 	public String getAssignmentToVarNamedTrusted() {
-		return assignmentToVarNamedTrusted.name();
+		return string(assignmentToVarNamedTrusted);
 	}
 
 	/**
 	 * @return the booleansInStringForm
 	 */
 	public String getBooleansInStringForm() {
-		return booleansInStringForm.name();
+		return string(booleansInStringForm);
 	}
 
 	/**
 	 * @return the caseDefaultShouldAppearLast
 	 */
 	public String getCaseDefaultShouldAppearLast() {
-		return caseDefaultShouldAppearLast.name();
+		return string(caseDefaultShouldAppearLast);
 	}
 
 	/**
 	 * @return the dqStringNotRequired
 	 */
 	public String getDqStringNotRequired() {
-		return dqStringNotRequired.name();
+		return string(dqStringNotRequired);
 	}
 
 	/**
 	 * @return the dqStringNotRequiredVariable
 	 */
 	public String getDqStringNotRequiredVariable() {
-		return dqStringNotRequiredVariable.name();
+		return string(dqStringNotRequiredVariable);
 	}
 
 	/**
 	 * @return the ensureShouldAppearFirstInResource
 	 */
 	public String getEnsureShouldAppearFirstInResource() {
-		return ensureShouldAppearFirstInResource.name();
+		return string(ensureShouldAppearFirstInResource);
 	}
 
 	/**
 	 * @return the importIsDeprecated
 	 */
 	public String getImportIsDeprecated() {
-		return importIsDeprecated.name();
+		return string(importIsDeprecated);
 	}
 
 	/**
 	 * @return the interpolatedNonBraceEnclosedHyphens
 	 */
 	public String getInterpolatedNonBraceEnclosedHyphens() {
-		return interpolatedNonBraceEnclosedHyphens.name();
+		return string(interpolatedNonBraceEnclosedHyphens);
 	}
 
 	/**
 	 * @return the missingDefaultInSelector
 	 */
 	public String getMissingDefaultInSelector() {
-		return missingDefaultInSelector.name();
+		return string(missingDefaultInSelector);
 	}
 
 	/**
 	 * @return the mlComments
 	 */
 	public String getMlComments() {
-		return mlComments.name();
+		return string(mlComments);
 	}
 
 	/**
 	 * @return the rightToLeftRelationships
 	 */
 	public String getRightToLeftRelationships() {
-		return rightToLeftRelationships.name();
+		return string(rightToLeftRelationships);
 	}
 
 	/**
 	 * @return the selectorDefaultShouldAppearLast
 	 */
 	public String getSelectorDefaultShouldAppearLast() {
-		return selectorDefaultShouldAppearLast.name();
+		return string(selectorDefaultShouldAppearLast);
 	}
 
 	/**
 	 * @return the unbracedInterpolation
 	 */
 	public String getUnbracedInterpolation() {
-		return unbracedInterpolation.name();
+		return string(unbracedInterpolation);
 	}
 
 	/**
 	 * @return the unquotedResourceTitles
 	 */
 	public String getUnquotedResourceTitles() {
-		return unquotedResourceTitles.name();
+		return string(unquotedResourceTitles);
 	}
 
 	/**
 	 * @return the validityAssertedAtRuntime
 	 */
 	public String getValidityAssertedAtRuntime() {
-		return validityAssertedAtRuntime.name();
+		return string(validityAssertedAtRuntime);
 	}
 
 	@Override
