@@ -12,15 +12,12 @@ package com.puppetlabs.geppetto.forge.jenkins;
 
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_URL;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
-import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.getRepositoryInfo;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.plugins.git.GitSCM;
-import hudson.scm.SCM;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -35,12 +32,15 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
-import com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.RepositoryInfo;
 
 public class ForgePublisher extends Builder {
 
 	@Extension
-	public static class DescriptorImpl extends BuildStepDescriptor<Builder> {
+	public static class ForgePublisherDescriptor extends BuildStepDescriptor<Builder> {
+		public ForgePublisherDescriptor() {
+			super(ForgePublisher.class);
+		}
+
 		public FormValidation doCheckForgeServiceURL(@QueryParameter String value) throws IOException, ServletException {
 			return checkURL(value);
 		}
@@ -119,18 +119,10 @@ public class ForgePublisher extends Builder {
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, final BuildListener listener)
 			throws InterruptedException, IOException {
 
-		RepositoryInfo repoInfo = getRepositoryInfo(build, listener);
-		if(repoInfo == null)
-			return false;
-
-		SCM scm = build.getProject().getScm();
-		if(!(scm instanceof GitSCM)) {
-			info(listener, "Unable to find Git SCM configuration in the project configuration");
-			return true; // Error not caused here
-		}
-
-		GitSCM git = (GitSCM) scm;
-		FilePath gitRoot = git.getModuleRoot(build.getWorkspace(), build);
+		RepositoryInfo repoInfo = RepositoryInfo.getRepositoryInfo(build, listener);
+		FilePath moduleRoot = repoInfo == null
+				? build.getWorkspace()
+				: repoInfo.getGitRoot();
 
 		ValidationResult validationResult = null;
 		List<ValidationResult> validationResults = build.getActions(ValidationResult.class);
@@ -143,18 +135,24 @@ public class ForgePublisher extends Builder {
 			if(severity >= Diagnostic.ERROR) {
 				// This should normally never happen since the build result should have been worse
 				// than stable and trapped above.
-				info(listener, "Validation of %s has errors so no pushing will occur.", gitRoot.getName());
+				info(listener, "Validation of %s has errors so no pushing will occur.", moduleRoot.getName());
 				return true; // Error not caused here
 			}
 
 			if(severity == Diagnostic.WARNING && publishOnlyIfNoWarnings) {
-				listener.error("Validation of %s has warnings so no pushing will occur.", gitRoot.getName());
+				listener.error("Validation of %s has warnings so no pushing will occur.", moduleRoot.getName());
 				return false; // Fail the build here
 			}
 		}
 
-		Diagnostic publishingResult = gitRoot.act(new ForgePublisherCallable(
-			forgeLogin, forgePassword, forgeServiceURL, repoInfo.repositoryURL, repoInfo.branchName));
+		String repoURL = null;
+		String branch = null;
+		if(repoInfo != null) {
+			repoURL = repoInfo.getRepositoryURL();
+			branch = repoInfo.getBranchName();
+		}
+		Diagnostic publishingResult = moduleRoot.act(new ForgePublisherCallable(
+			forgeLogin, forgePassword, forgeServiceURL, repoURL, branch));
 
 		PublicationResult data = new PublicationResult(build, publishingResult);
 		build.addAction(data);

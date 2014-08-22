@@ -45,10 +45,10 @@
 										<td style="overflow:hidden;text-overflow:ellipsis">
 											<j:choose>
 												<j:when test="${diag.line > 0}">
-													<a href="${diag.hrefPrefix}/${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
+													<a href="${diag.hrefPrefix}${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
 												</j:when>
 												<j:otherwise>
-													<a href="${diag.hrefPrefix}/${diag.path}" target="_blank">${diag.path}</a>
+													<a href="${diag.hrefPrefix}${diag.path}" target="_blank">${diag.path}</a>
 												</j:otherwise>
 											</j:choose>
 										</td>

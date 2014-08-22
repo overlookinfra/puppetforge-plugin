@@ -12,8 +12,8 @@ package com.puppetlabs.geppetto.forge.jenkins;
 
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_URL;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
-import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.getRepositoryInfo;
 import hudson.Extension;
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
@@ -27,6 +27,7 @@ import hudson.util.ListBoxModel;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import javax.servlet.ServletException;
 
@@ -37,17 +38,21 @@ import org.kohsuke.stapler.QueryParameter;
 
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
-import com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.RepositoryInfo;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
 import com.puppetlabs.geppetto.forge.jenkins.PPProblemsAdvisor.ProblemsAdvisorDescriptor;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
+import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Option;
 
 public class ForgeValidator extends Builder {
 
 	@Extension
-	public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+	public static final class ForgeValidatorDescriptor extends BuildStepDescriptor<Builder> {
+		public ForgeValidatorDescriptor() {
+			super(ForgeValidator.class);
+		}
+
 		public FormValidation doCheckForgeServiceURL(@QueryParameter String value) throws IOException, ServletException {
 			return checkURL(value);
 		}
@@ -67,6 +72,10 @@ public class ForgeValidator extends Builder {
 			for(ComplianceLevel level : ComplianceLevel.values())
 				items.add(level.toString(), level.name());
 			return items;
+		}
+
+		public ListBoxModel doFillPuppetLintMaxSeverityItems() {
+			return doFillValidationPreferenceItems(ValidationPreference.IGNORE);
 		}
 
 		/**
@@ -106,6 +115,13 @@ public class ForgeValidator extends Builder {
 		}
 	}
 
+	public static ListBoxModel doFillValidationPreferenceItems(ValidationPreference dflt) {
+		List<hudson.util.ListBoxModel.Option> items = new ArrayList<hudson.util.ListBoxModel.Option>();
+		for(ValidationPreference pref : ValidationPreference.values())
+			items.add(new hudson.util.ListBoxModel.Option(pref.toString(), pref.name(), pref == dflt));
+		return new ListBoxModel(items);
+	}
+
 	private static Option getOption(String s) {
 		s = s.trim();
 		for(Option option : Option.values()) {
@@ -119,53 +135,55 @@ public class ForgeValidator extends Builder {
 	}
 
 	static Option[] parsePuppetLintOptions(String puppetLintOptions) throws FormValidation {
-		Option[] options;
-		if(puppetLintOptions == null)
-			options = null;
-		else {
-			FormValidation validationResult = FormValidation.error("Invalid Puppet Lint Option");
-			boolean isNegative = puppetLintOptions.startsWith("-");
-			int start = 0;
-			if(isNegative)
-				++start;
-
-			boolean allValid = true;
-			ArrayList<Option> optionList = new ArrayList<Option>();
-			int top = puppetLintOptions.length();
-			int commaIdx;
-			while(start < top && (commaIdx = puppetLintOptions.indexOf(',', start)) > 0) {
-				try {
-					optionList.add(getOption(puppetLintOptions.substring(start, commaIdx)));
-				}
-				catch(IllegalArgumentException e) {
-					allValid = false;
-					validationResult.addSuppressed(e);
-				}
-				start = commaIdx + 1;
-			}
-			if(start < top)
-				try {
-					optionList.add(getOption(puppetLintOptions.substring(start)));
-				}
-				catch(IllegalArgumentException e) {
-					allValid = false;
-					validationResult.addSuppressed(e);
-				}
-
-			if(!allValid)
-				throw validationResult;
-
-			if(!isNegative) {
-				// Inverse the list of options
-				ArrayList<Option> inverseList = new ArrayList<Option>();
-				for(Option option : Option.values())
-					if(!optionList.contains(option))
-						inverseList.add(option);
-				optionList = inverseList;
-			}
-			options = optionList.toArray(new Option[optionList.size()]);
+		if(puppetLintOptions != null) {
+			puppetLintOptions = puppetLintOptions.trim();
+			if(puppetLintOptions.length() == 0)
+				puppetLintOptions = null;
 		}
-		return options;
+		if(puppetLintOptions == null)
+			return new Option[0];
+
+		FormValidation validationResult = FormValidation.error("Invalid Puppet Lint Option");
+		boolean isNegative = puppetLintOptions.startsWith("-");
+		int start = 0;
+		if(isNegative)
+			++start;
+
+		boolean allValid = true;
+		ArrayList<Option> optionList = new ArrayList<Option>();
+		int top = puppetLintOptions.length();
+		int commaIdx;
+		while(start < top && (commaIdx = puppetLintOptions.indexOf(',', start)) > 0) {
+			try {
+				optionList.add(getOption(puppetLintOptions.substring(start, commaIdx)));
+			}
+			catch(IllegalArgumentException e) {
+				allValid = false;
+				validationResult.addSuppressed(e);
+			}
+			start = commaIdx + 1;
+		}
+		if(start < top)
+			try {
+				optionList.add(getOption(puppetLintOptions.substring(start)));
+			}
+			catch(IllegalArgumentException e) {
+				allValid = false;
+				validationResult.addSuppressed(e);
+			}
+
+		if(!allValid)
+			throw validationResult;
+
+		if(!isNegative) {
+			// Inverse the list of options
+			ArrayList<Option> inverseList = new ArrayList<Option>();
+			for(Option option : Option.values())
+				if(!optionList.contains(option))
+					inverseList.add(option);
+			optionList = inverseList;
+		}
+		return optionList.toArray(new Option[optionList.size()]);
 	}
 
 	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
@@ -180,6 +198,8 @@ public class ForgeValidator extends Builder {
 
 	private final ModuleValidationAdvisor moduleValidationAdvisor;
 
+	private final ValidationPreference puppetLintMaxSeverity;
+
 	private final Option[] puppetLintOptions;
 
 	private final String forgeServiceURL;
@@ -187,7 +207,8 @@ public class ForgeValidator extends Builder {
 	@DataBoundConstructor
 	public ForgeValidator(String forgeServiceURL, ComplianceLevel complianceLevel, Boolean checkReferences,
 			Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
-			ModuleValidationAdvisor moduleValidationAdvisor, String puppetLintOptions) throws FormValidation {
+			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity,
+			String puppetLintOptions) throws FormValidation {
 		this.forgeServiceURL = forgeServiceURL == null
 				? FORGE_SERVICE_URL
 				: forgeServiceURL;
@@ -202,12 +223,9 @@ public class ForgeValidator extends Builder {
 				: checkModuleSemantics.booleanValue();
 		this.problemsAdvisor = problemsAdvisor;
 		this.moduleValidationAdvisor = moduleValidationAdvisor;
-
-		if(puppetLintOptions != null) {
-			puppetLintOptions = puppetLintOptions.trim();
-			if(puppetLintOptions.length() == 0)
-				puppetLintOptions = null;
-		}
+		this.puppetLintMaxSeverity = puppetLintMaxSeverity == null
+				? ValidationPreference.IGNORE
+				: puppetLintMaxSeverity;
 		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions);
 	}
 
@@ -231,8 +249,21 @@ public class ForgeValidator extends Builder {
 				: problemsAdvisor;
 	}
 
-	public Option[] getPuppetLintOptions() {
-		return puppetLintOptions;
+	public String getPuppetLintMaxSeverity() {
+		return puppetLintMaxSeverity == null
+				? "IGNORE"
+				: puppetLintMaxSeverity.name();
+	}
+
+	public String getPuppetLintOptions() {
+		if(puppetLintOptions == null || puppetLintOptions.length == 0)
+			return null;
+		StringBuilder bld = new StringBuilder(puppetLintOptions[0].toString());
+		for(int idx = 1; idx < puppetLintOptions.length; ++idx) {
+			bld.append(',');
+			bld.append(puppetLintOptions[idx]);
+		}
+		return bld.toString();
 	}
 
 	public boolean isCheckModuleSemantics() {
@@ -247,17 +278,27 @@ public class ForgeValidator extends Builder {
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
 			throws InterruptedException, IOException {
 
-		RepositoryInfo repoInfo = getRepositoryInfo(build, listener);
-		if(repoInfo == null)
-			return false;
+		RepositoryInfo repoInfo = RepositoryInfo.getRepositoryInfo(build, listener);
+		FilePath moduleRoot;
+		String sourceURI;
+		String branch;
+		if(repoInfo != null) {
+			sourceURI = repoInfo.getRepositoryURL();
+			moduleRoot = repoInfo.getGitRoot();
+			branch = repoInfo.getBranchName();
+		}
+		else {
+			sourceURI = build.getProject().getAbsoluteUrl() + "ws/";
+			moduleRoot = build.getWorkspace();
+			branch = null;
+		}
 
-		boolean validationErrors = false;
-		ResultWithDiagnostic<byte[]> result = repoInfo.gitRoot.act(new ForgeValidatorCallable(
-			forgeServiceURL, repoInfo.repositoryURL, repoInfo.branchName, complianceLevel, checkReferences,
-			checkModuleSemantics, getProblemsAdvisor(), getModuleValidationAdvisor().getAdvisor(),
-			getPuppetLintOptions()));
+		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
+			forgeServiceURL, sourceURI, branch, complianceLevel, checkReferences, checkModuleSemantics,
+			getProblemsAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, puppetLintOptions));
 
 		// Emit non-validation diagnostics to the console
+		boolean validationErrors = false;
 		Iterator<Diagnostic> diagIter = result.iterator();
 		while(diagIter.hasNext()) {
 			Diagnostic diag = diagIter.next();

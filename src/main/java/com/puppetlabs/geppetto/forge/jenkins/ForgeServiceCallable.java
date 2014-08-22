@@ -26,8 +26,8 @@ public abstract class ForgeServiceCallable<T extends Diagnostic> extends ForgeCa
 	public ForgeServiceCallable() {
 	}
 
-	public ForgeServiceCallable(String forgeServiceURL, String repositoryURL, String branchName) {
-		super(repositoryURL, branchName);
+	public ForgeServiceCallable(String forgeServiceURL, String sourceURI, String branchName) {
+		super(sourceURI, branchName);
 		this.forgeServiceURL = forgeServiceURL;
 	}
 

@@ -48,6 +48,9 @@
          </j:scope>
       </f:property>
 	  <f:block><h4>Linting</h4></f:block>
+	  <f:entry field="puppetLintMaxSeverity" title="${%Puppet Lint max severity}">
+	    <f:select default="${descriptor.defaults.puppetLintMaxSeverity}"/>
+	  </f:entry>
       <f:entry title="${%Puppet-lint Options}" field="puppetLintOptions">
         <f:textbox />
       </f:entry>

@@ -11,16 +11,14 @@
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeValidator.doFillValidationPreferenceItems;
 import hudson.Extension;
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.util.ListBoxModel;
-import hudson.util.ListBoxModel.Option;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -96,13 +94,6 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 		public ListBoxModel doFillUnquotedResourceTitlesItems() {
 			return doFillValidationPreferenceItems(defaults.unquotedResourceTitles());
-		}
-
-		public ListBoxModel doFillValidationPreferenceItems(ValidationPreference dflt) {
-			List<Option> items = new ArrayList<Option>();
-			for(ValidationPreference pref : ValidationPreference.values())
-				items.add(new Option(pref.toString(), pref.name(), pref == dflt));
-			return new ListBoxModel(items);
 		}
 
 		public ListBoxModel doFillValidityAssertedAtRuntimeItems() {

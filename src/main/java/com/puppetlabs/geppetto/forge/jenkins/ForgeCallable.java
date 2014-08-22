@@ -21,9 +21,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -51,19 +48,17 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 
 	private transient Injector injector;
 
-	private transient Repository localRepository;
+	private transient File sourceDir;
 
-	private transient File repositoryDir;
-
-	private String repositoryURL;
+	private String sourceURI;
 
 	private String branchName;
 
 	public ForgeCallable() {
 	}
 
-	public ForgeCallable(String repositoryURL, String branchName) {
-		this.repositoryURL = repositoryURL;
+	public ForgeCallable(String sourceURI, String branchName) {
+		this.sourceURI = sourceURI;
 		this.branchName = branchName;
 	}
 
@@ -83,7 +78,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 	}
 
 	protected Collection<File> findModuleRoots(Diagnostic diag) {
-		return getForge(diag).findModuleRoots(getRepositoryDir(), null);
+		return getForge(diag).findModuleRoots(getSourceDir(), null);
 	}
 
 	public String getBranchName() {
@@ -109,36 +104,20 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		return injector;
 	}
 
-	protected Repository getLocalRepository() throws IOException {
-		if(localRepository == null) {
-			File guessGitDir = new File(getRepositoryDir(), ".git");
-			boolean bare = !guessGitDir.isDirectory();
-			FileRepositoryBuilder bld = new FileRepositoryBuilder();
-			if(bare) {
-				bld.setBare();
-				bld.setGitDir(getRepositoryDir());
-			}
-			else
-				bld.setWorkTree(getRepositoryDir());
-			localRepository = bld.setup().build();
-		}
-		return localRepository;
-	}
-
 	protected Metadata getModuleMetadata(File moduleDirectory, Diagnostic diag) throws IOException {
 		return getForge(diag).createFromModuleDirectory(moduleDirectory, null, null, diag);
 	}
 
-	protected File getRepositoryDir() {
-		return repositoryDir;
+	protected File getSourceDir() {
+		return sourceDir;
 	}
 
-	public String getRepositoryURL() {
-		return repositoryURL;
+	public String getSourceURI() {
+		return sourceURI;
 	}
 
 	public final T invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
-		repositoryDir = f;
+		sourceDir = f;
 		buildDir = new File(f, BUILD_DIR);
 		return invoke(channel);
 	}
