@@ -16,8 +16,30 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Path;
+
+import com.puppetlabs.geppetto.common.Strings;
+
 abstract class ForgeBuilder {
+	static FormValidation checkRelativePath(String value) {
+		value = Strings.trimToNull(value);
+		if(value != null) {
+			if(value.indexOf('?') >= 0 || value.indexOf('*') >= 0)
+				return FormValidation.error("Path cannot contain wildcard characters");
+			IPath path = Path.fromOSString(value);
+			if(path.isAbsolute())
+				return FormValidation.error("Path must be relative");
+			if(path.hasTrailingSeparator())
+				return FormValidation.error("Path must not have a trailing separator");
+			if(path.getDevice() != null)
+				return FormValidation.error("Path must not have a device");
+		}
+		return FormValidation.ok();
+	}
+
 	static FormValidation checkURL(String value) {
+		value = Strings.trimToNull(value);
 		if(value == null)
 			return FormValidation.ok();
 		try {

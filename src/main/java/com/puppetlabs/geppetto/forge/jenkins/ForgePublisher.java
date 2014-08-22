@@ -11,6 +11,7 @@
 package com.puppetlabs.geppetto.forge.jenkins;
 
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_URL;
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkRelativePath;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
 import hudson.Extension;
 import hudson.FilePath;
@@ -43,6 +44,10 @@ public class ForgePublisher extends Builder {
 
 		public FormValidation doCheckForgeServiceURL(@QueryParameter String value) throws IOException, ServletException {
 			return checkURL(value);
+		}
+
+		public FormValidation doCheckSourcePath(@QueryParameter String value) throws IOException, ServletException {
+			return checkRelativePath(value);
 		}
 
 		@Override
@@ -81,9 +86,12 @@ public class ForgePublisher extends Builder {
 
 	private final String forgeServiceURL;
 
+	private final String sourcePath;
+
 	@DataBoundConstructor
-	public ForgePublisher(Boolean publishOnlyIfNoWarnings, String forgeOAuthToken, String forgeServiceURL,
-			String forgeLogin, String forgePassword) {
+	public ForgePublisher(String sourcePath, Boolean publishOnlyIfNoWarnings, String forgeOAuthToken,
+			String forgeServiceURL, String forgeLogin, String forgePassword) {
+		this.sourcePath = sourcePath;
 		this.forgeServiceURL = forgeServiceURL == null
 				? FORGE_SERVICE_URL
 				: forgeServiceURL;
@@ -111,6 +119,10 @@ public class ForgePublisher extends Builder {
 		return forgeServiceURL;
 	}
 
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
 	public boolean isPublishOnlyIfNoWarnings() {
 		return publishOnlyIfNoWarnings;
 	}
@@ -120,9 +132,21 @@ public class ForgePublisher extends Builder {
 			throws InterruptedException, IOException {
 
 		RepositoryInfo repoInfo = RepositoryInfo.getRepositoryInfo(build, listener);
-		FilePath moduleRoot = repoInfo == null
-				? build.getWorkspace()
-				: repoInfo.getGitRoot();
+		FilePath moduleRoot;
+		String sourceURI;
+		String branch;
+		if(repoInfo != null) {
+			sourceURI = repoInfo.getRepositoryURL();
+			moduleRoot = repoInfo.getGitRoot();
+			branch = repoInfo.getBranchName();
+		}
+		else {
+			sourceURI = build.getProject().getAbsoluteUrl() + "ws/";
+			moduleRoot = build.getWorkspace();
+			branch = null;
+		}
+		if(sourcePath != null)
+			moduleRoot = moduleRoot.child(sourcePath);
 
 		ValidationResult validationResult = null;
 		List<ValidationResult> validationResults = build.getActions(ValidationResult.class);
@@ -144,15 +168,8 @@ public class ForgePublisher extends Builder {
 				return false; // Fail the build here
 			}
 		}
-
-		String repoURL = null;
-		String branch = null;
-		if(repoInfo != null) {
-			repoURL = repoInfo.getRepositoryURL();
-			branch = repoInfo.getBranchName();
-		}
 		Diagnostic publishingResult = moduleRoot.act(new ForgePublisherCallable(
-			forgeLogin, forgePassword, forgeServiceURL, repoURL, branch));
+			forgeLogin, forgePassword, forgeServiceURL, sourceURI, branch));
 
 		PublicationResult data = new PublicationResult(build, publishingResult);
 		build.addAction(data);

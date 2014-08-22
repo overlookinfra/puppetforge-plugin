@@ -13,6 +13,10 @@
   <!--
     This jelly script is used for per-project configuration.
   -->
+  <f:entry field="sourcePath" title="${%Relative source path}">
+    <f:textbox default="${descriptor.sourcePath}"/>
+  </f:entry>
+
   <f:entry field="forgeServiceURL" title="${%Forge Service URL}">
     <f:textbox default="${descriptor.forgeServiceURL}"/>
   </f:entry>

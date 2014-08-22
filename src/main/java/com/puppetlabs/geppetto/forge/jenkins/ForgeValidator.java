@@ -11,6 +11,7 @@
 package com.puppetlabs.geppetto.forge.jenkins;
 
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_URL;
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkRelativePath;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
 import hudson.Extension;
 import hudson.FilePath;
@@ -65,6 +66,10 @@ public class ForgeValidator extends Builder {
 			catch(FormValidation e) {
 				return e;
 			}
+		}
+
+		public FormValidation doCheckSourcePath(@QueryParameter String value) throws IOException, ServletException {
+			return checkRelativePath(value);
 		}
 
 		public ListBoxModel doFillComplianceLevelItems() {
@@ -202,13 +207,16 @@ public class ForgeValidator extends Builder {
 
 	private final Option[] puppetLintOptions;
 
+	private final String sourcePath;
+
 	private final String forgeServiceURL;
 
 	@DataBoundConstructor
-	public ForgeValidator(String forgeServiceURL, ComplianceLevel complianceLevel, Boolean checkReferences,
-			Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
+	public ForgeValidator(String sourcePath, String forgeServiceURL, ComplianceLevel complianceLevel,
+			Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
 			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity,
 			String puppetLintOptions) throws FormValidation {
+		this.sourcePath = sourcePath;
 		this.forgeServiceURL = forgeServiceURL == null
 				? FORGE_SERVICE_URL
 				: forgeServiceURL;
@@ -266,6 +274,10 @@ public class ForgeValidator extends Builder {
 		return bld.toString();
 	}
 
+	public String getSourcePath() {
+		return sourcePath;
+	}
+
 	public boolean isCheckModuleSemantics() {
 		return checkModuleSemantics;
 	}
@@ -292,6 +304,8 @@ public class ForgeValidator extends Builder {
 			moduleRoot = build.getWorkspace();
 			branch = null;
 		}
+		if(sourcePath != null)
+			moduleRoot = moduleRoot.child(sourcePath);
 
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
 			forgeServiceURL, sourceURI, branch, complianceLevel, checkReferences, checkModuleSemantics,
