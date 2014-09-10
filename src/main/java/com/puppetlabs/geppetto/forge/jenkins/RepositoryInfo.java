@@ -40,9 +40,8 @@ public class RepositoryInfo {
 		String configuredRemote = repoConfig.getString(
 			ConfigConstants.CONFIG_BRANCH_SECTION, repository.getBranch(), ConfigConstants.CONFIG_KEY_REMOTE);
 		return configuredRemote == null
-				? null
-				: repoConfig.getString(
-					ConfigConstants.CONFIG_REMOTE_SECTION, configuredRemote, ConfigConstants.CONFIG_KEY_URL);
+			? null
+			: repoConfig.getString(ConfigConstants.CONFIG_REMOTE_SECTION, configuredRemote, ConfigConstants.CONFIG_KEY_URL);
 	}
 
 	public static RepositoryInfo getRepositoryInfo(AbstractBuild<?, ?> build, BuildListener listener) {

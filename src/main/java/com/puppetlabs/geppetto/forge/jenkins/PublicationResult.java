@@ -56,10 +56,12 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 		return build;
 	}
 
+	@Override
 	public String getDisplayName() {
 		return "Publication Results";
 	}
 
+	@Override
 	public String getIconFileName() {
 		return Functions.getResourcePath() + "/plugin/puppetforge/icons/puppetlabs-32x32.png";
 	}
@@ -70,8 +72,8 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 
 	public List<Diagnostic> getResultDiagnostics() {
 		return diagnostic == null
-				? Collections.<Diagnostic> emptyList()
-				: diagnostic.getChildren();
+			? Collections.<Diagnostic> emptyList()
+			: diagnostic.getChildren();
 	}
 
 	public int getResultDiagnosticsCount() {
@@ -100,19 +102,19 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 			if(warningCount == 0)
 				return "No errors or warnings";
 			return warningCount + (warningCount > 1
-					? " warnings"
-					: " warning");
+				? " warnings"
+				: " warning");
 		}
 
 		if(warningCount == 0)
 			return errorCount + (errorCount > 1
-					? " errors"
-					: " error");
+				? " errors"
+				: " error");
 		return errorCount + (errorCount > 1
-				? " errors and "
-				: " error and ") + warningCount + (warningCount > 1
-				? " warnings"
-				: " warning");
+			? " errors and "
+			: " error and ") + warningCount + (warningCount > 1
+			? " warnings"
+			: " warning");
 	}
 
 	public String getTitle() {
@@ -123,6 +125,7 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 		return getUrlName() + '/' + item;
 	}
 
+	@Override
 	public String getUrlName() {
 		return "publicationReport";
 	}

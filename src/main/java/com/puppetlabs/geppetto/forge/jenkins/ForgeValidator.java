@@ -212,28 +212,27 @@ public class ForgeValidator extends Builder {
 	private final String forgeServiceURL;
 
 	@DataBoundConstructor
-	public ForgeValidator(String sourcePath, String forgeServiceURL, ComplianceLevel complianceLevel,
-			Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
-			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity,
-			String puppetLintOptions) throws FormValidation {
+	public ForgeValidator(String sourcePath, String forgeServiceURL, ComplianceLevel complianceLevel, Boolean checkReferences,
+			Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor, ModuleValidationAdvisor moduleValidationAdvisor,
+			ValidationPreference puppetLintMaxSeverity, String puppetLintOptions) throws FormValidation {
 		this.sourcePath = sourcePath;
 		this.forgeServiceURL = forgeServiceURL == null
-				? FORGE_SERVICE_URL
-				: forgeServiceURL;
+			? FORGE_SERVICE_URL
+			: forgeServiceURL;
 		this.complianceLevel = complianceLevel == null
-				? PuppetTarget.getDefault().getComplianceLevel()
-				: complianceLevel;
+			? PuppetTarget.getDefault().getComplianceLevel()
+			: complianceLevel;
 		this.checkReferences = checkReferences == null
-				? false
-				: checkReferences.booleanValue();
+			? false
+			: checkReferences.booleanValue();
 		this.checkModuleSemantics = checkModuleSemantics == null
-				? false
-				: checkModuleSemantics.booleanValue();
+			? false
+			: checkModuleSemantics.booleanValue();
 		this.problemsAdvisor = problemsAdvisor;
 		this.moduleValidationAdvisor = moduleValidationAdvisor;
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity == null
-				? ValidationPreference.IGNORE
-				: puppetLintMaxSeverity;
+			? ValidationPreference.IGNORE
+			: puppetLintMaxSeverity;
 		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions);
 	}
 
@@ -247,20 +246,20 @@ public class ForgeValidator extends Builder {
 
 	public ModuleValidationAdvisor getModuleValidationAdvisor() {
 		return moduleValidationAdvisor == null
-				? new ModuleValidationAdvisor()
-				: moduleValidationAdvisor;
+			? new ModuleValidationAdvisor()
+			: moduleValidationAdvisor;
 	}
 
 	public PPProblemsAdvisor getProblemsAdvisor() {
 		return problemsAdvisor == null
-				? new PPProblemsAdvisor()
-				: problemsAdvisor;
+			? new PPProblemsAdvisor()
+			: problemsAdvisor;
 	}
 
 	public String getPuppetLintMaxSeverity() {
 		return puppetLintMaxSeverity == null
-				? "IGNORE"
-				: puppetLintMaxSeverity.name();
+			? "IGNORE"
+			: puppetLintMaxSeverity.name();
 	}
 
 	public String getPuppetLintOptions() {
@@ -287,8 +286,7 @@ public class ForgeValidator extends Builder {
 	}
 
 	@Override
-	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
-			throws InterruptedException, IOException {
+	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
 
 		RepositoryInfo repoInfo = RepositoryInfo.getRepositoryInfo(build, listener);
 		FilePath moduleRoot;
@@ -308,8 +306,8 @@ public class ForgeValidator extends Builder {
 			moduleRoot = moduleRoot.child(sourcePath);
 
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
-			forgeServiceURL, sourceURI, branch, complianceLevel, checkReferences, checkModuleSemantics,
-			getProblemsAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, puppetLintOptions));
+			forgeServiceURL, sourceURI, branch, complianceLevel, checkReferences, checkModuleSemantics, getProblemsAdvisor(),
+			getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, puppetLintOptions));
 
 		// Emit non-validation diagnostics to the console
 		boolean validationErrors = false;

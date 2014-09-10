@@ -43,12 +43,10 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 
 	private final ValidationPreference whitespaceInTag;
 
-	public ModuleValidationAdvisorBean(ValidationPreference circularDependency,
-			ValidationPreference dependencyVersionMismatch, ValidationPreference deprecatedKey,
-			ValidationPreference missingForgeRequiredFields, ValidationPreference moduleNameNotStrict,
-			ValidationPreference moduleRedefinition, ValidationPreference modulefileExists,
-			ValidationPreference modulefileExistsAndIsUsed, ValidationPreference unexpectedSubmodule,
-			ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
+	public ModuleValidationAdvisorBean(ValidationPreference circularDependency, ValidationPreference dependencyVersionMismatch,
+			ValidationPreference deprecatedKey, ValidationPreference missingForgeRequiredFields, ValidationPreference moduleNameNotStrict,
+			ValidationPreference moduleRedefinition, ValidationPreference modulefileExists, ValidationPreference modulefileExistsAndIsUsed,
+			ValidationPreference unexpectedSubmodule, ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
 			ValidationPreference whitespaceInTag) {
 		this.circularDependency = circularDependency;
 		this.dependencyVersionMismatch = dependencyVersionMismatch;
@@ -67,6 +65,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the circularDependency
 	 */
+	@Override
 	public ValidationPreference getCircularDependency() {
 		return circularDependency;
 	}
@@ -74,6 +73,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the dependencyVersionMismatch
 	 */
+	@Override
 	public ValidationPreference getDependencyVersionMismatch() {
 		return dependencyVersionMismatch;
 	}
@@ -81,6 +81,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the deprecatedKey
 	 */
+	@Override
 	public ValidationPreference getDeprecatedKey() {
 		return deprecatedKey;
 	}
@@ -88,6 +89,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the missingForgeRequiredFields
 	 */
+	@Override
 	public ValidationPreference getMissingForgeRequiredFields() {
 		return missingForgeRequiredFields;
 	}
@@ -95,6 +97,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the modulefileExists
 	 */
+	@Override
 	public ValidationPreference getModulefileExists() {
 		return modulefileExists;
 	}
@@ -102,6 +105,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the modulefileExistsAndIsUsed
 	 */
+	@Override
 	public ValidationPreference getModulefileExistsAndIsUsed() {
 		return modulefileExistsAndIsUsed;
 	}
@@ -109,6 +113,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the moduleNameNotStrict
 	 */
+	@Override
 	public ValidationPreference getModuleNameNotStrict() {
 		return moduleNameNotStrict;
 	}
@@ -116,6 +121,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the moduleRedefinition
 	 */
+	@Override
 	public ValidationPreference getModuleRedefinition() {
 		return moduleRedefinition;
 	}
@@ -123,6 +129,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the unexpectedSubmodule
 	 */
+	@Override
 	public ValidationPreference getUnexpectedSubmodule() {
 		return unexpectedSubmodule;
 	}
@@ -130,6 +137,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the unrecognizedKey
 	 */
+	@Override
 	public ValidationPreference getUnrecognizedKey() {
 		return unrecognizedKey;
 	}
@@ -137,6 +145,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the unresolvedReference
 	 */
+	@Override
 	public ValidationPreference getUnresolvedReference() {
 		return unresolvedReference;
 	}
@@ -144,6 +153,7 @@ public class ModuleValidationAdvisorBean implements IModuleValidationAdvisor, Se
 	/**
 	 * @return the whitespaceInTag
 	 */
+	@Override
 	public ValidationPreference getWhitespaceInTag() {
 		return whitespaceInTag;
 	}

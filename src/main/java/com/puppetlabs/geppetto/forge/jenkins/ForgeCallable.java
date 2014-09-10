@@ -116,6 +116,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		return sourceURI;
 	}
 
+	@Override
 	public final T invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
 		sourceDir = f;
 		buildDir = new File(f, BUILD_DIR);

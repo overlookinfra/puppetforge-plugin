@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -57,7 +57,7 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 	 * Method called by the Stapler dispatcher. It is automatically detected
 	 * when the dispatcher looks for methods that starts with &quot;do&quot;
 	 * The method doValidation corresponds to the path <build>/stackhammerValidation/dependencyGraph
-	 * 
+	 *
 	 * @param req
 	 * @param rsp
 	 * @throws IOException
@@ -90,10 +90,12 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return build;
 	}
 
+	@Override
 	public String getDisplayName() {
 		return "Validation Results";
 	}
 
+	@Override
 	public String getIconFileName() {
 		return Functions.getResourcePath() + "/plugin/puppetforge/icons/puppetlabs-32x32.png";
 	}
@@ -104,14 +106,14 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	public byte[] getResult() {
 		return resultDiagnostic == null
-				? null
-				: resultDiagnostic.getResult();
+			? null
+			: resultDiagnostic.getResult();
 	}
 
 	public List<Diagnostic> getResultDiagnostics() {
 		return resultDiagnostic == null
-				? Collections.<Diagnostic> emptyList()
-				: resultDiagnostic.getChildren();
+			? Collections.<Diagnostic> emptyList()
+			: resultDiagnostic.getChildren();
 	}
 
 	public int getResultDiagnosticsCount() {
@@ -120,8 +122,8 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	public int getSeverity() {
 		return resultDiagnostic == null
-				? Diagnostic.OK
-				: resultDiagnostic.getSeverity();
+			? Diagnostic.OK
+			: resultDiagnostic.getSeverity();
 	}
 
 	public String getSummary() {
@@ -146,25 +148,25 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 			if(warningCount == 0)
 				return "No errors or warnings";
 			return warningCount + (warningCount > 1
-					? " warnings"
-					: " warning");
+				? " warnings"
+				: " warning");
 		}
 
 		if(warningCount == 0)
 			return errorCount + (errorCount > 1
-					? " errors"
-					: " error");
+				? " errors"
+				: " error");
 		return errorCount + (errorCount > 1
-				? " errors and "
-				: " error and ") + warningCount + (warningCount > 1
-				? " warnings"
-				: " warning");
+			? " errors and "
+			: " error and ") + warningCount + (warningCount > 1
+			? " warnings"
+			: " warning");
 	}
 
 	public String getSummaryValidationGraphURL() {
 		return getResult() != null
-				? getUrlFor("dependencyGraph")
-				: null;
+			? getUrlFor("dependencyGraph")
+			: null;
 	}
 
 	public String getTitle() {
@@ -175,14 +177,15 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return getUrlName() + '/' + item;
 	}
 
+	@Override
 	public String getUrlName() {
 		return "validationReport";
 	}
 
 	public String getValidationGraphURL() {
 		return getResult() != null
-				? "dependencyGraph"
-				: null;
+			? "dependencyGraph"
+			: null;
 	}
 
 	public void setResult(ResultWithDiagnostic<byte[]> resultDiagnostic) {

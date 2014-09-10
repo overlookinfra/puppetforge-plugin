@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -39,8 +39,7 @@ public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
 	public ForgePublisherCallable() {
 	}
 
-	public ForgePublisherCallable(String forgeLogin, String forgePassword, String forgeServiceURL,
-			String repositoryURL, String branchName) {
+	public ForgePublisherCallable(String forgeLogin, String forgePassword, String forgeServiceURL, String repositoryURL, String branchName) {
 		super(forgeServiceURL, repositoryURL, branchName);
 		this.forgeLogin = forgeLogin;
 		this.forgePassword = forgePassword;
@@ -75,8 +74,7 @@ public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
 		buildDir.mkdirs();
 		File builtModules = new File(buildDir, "builtModules");
 		if(!(builtModules.mkdir() || builtModules.isDirectory())) {
-			result.addChild(new Diagnostic(Diagnostic.ERROR, Forge.PACKAGE, "Unable to create directory" +
-					builtModules.getPath()));
+			result.addChild(new Diagnostic(Diagnostic.ERROR, Forge.PACKAGE, "Unable to create directory" + builtModules.getPath()));
 			return result;
 		}
 

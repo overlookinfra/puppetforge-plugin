@@ -32,8 +32,7 @@ import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
  * A default implementation of IPotentialProblemsAdvisor that returns Warnings for all potential problems, and
  * Ignore for all stylistic problems
  */
-public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValidationAdvisor> implements
-		ExtensionPoint, Serializable {
+public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValidationAdvisor> implements ExtensionPoint, Serializable {
 
 	@Extension
 	public static class ModuleValidationAdvisorDescriptor extends Descriptor<ModuleValidationAdvisor> {
@@ -114,17 +113,15 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 	}
 
 	@DataBoundConstructor
-	public ModuleValidationAdvisor(ValidationPreference circularDependency,
-			ValidationPreference dependencyVersionMismatch, ValidationPreference deprecatedKey,
-			ValidationPreference missingForgeRequiredFields, ValidationPreference moduleNameNotStrict,
-			ValidationPreference moduleRedefinition, ValidationPreference modulefileExists,
-			ValidationPreference modulefileExistsAndIsUsed, ValidationPreference unexpectedSubmodule,
-			ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
+	public ModuleValidationAdvisor(ValidationPreference circularDependency, ValidationPreference dependencyVersionMismatch,
+			ValidationPreference deprecatedKey, ValidationPreference missingForgeRequiredFields, ValidationPreference moduleNameNotStrict,
+			ValidationPreference moduleRedefinition, ValidationPreference modulefileExists, ValidationPreference modulefileExistsAndIsUsed,
+			ValidationPreference unexpectedSubmodule, ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
 			ValidationPreference whitespaceInTag) {
 		this.advisor = new ModuleValidationAdvisorBean(
-			circularDependency, dependencyVersionMismatch, deprecatedKey, missingForgeRequiredFields,
-			moduleNameNotStrict, moduleRedefinition, modulefileExists, modulefileExistsAndIsUsed, unexpectedSubmodule,
-			unrecognizedKey, unresolvedReference, whitespaceInTag);
+			circularDependency, dependencyVersionMismatch, deprecatedKey, missingForgeRequiredFields, moduleNameNotStrict,
+			moduleRedefinition, modulefileExists, modulefileExistsAndIsUsed, unexpectedSubmodule, unrecognizedKey, unresolvedReference,
+			whitespaceInTag);
 	}
 
 	public IModuleValidationAdvisor getAdvisor() {

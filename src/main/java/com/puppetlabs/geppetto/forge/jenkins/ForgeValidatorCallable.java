@@ -90,10 +90,9 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	public ForgeValidatorCallable() {
 	}
 
-	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, String branchName,
-			ComplianceLevel complianceLevel, boolean checkReferences, boolean checkModuleSemantics,
-			IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
-			ValidationPreference puppetLintMaxSeverity, Option[] puppetLintOptions) {
+	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, String branchName, ComplianceLevel complianceLevel,
+			boolean checkReferences, boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor,
+			IModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, Option[] puppetLintOptions) {
 		super(forgeServiceURL, sourceURI, branchName);
 		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
@@ -119,25 +118,23 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		modules.add(new ValidationModule());
 		String repoHrefPrefix = getSourceHrefPrefix();
 		Class<? extends IHrefProducer> hrefProducerClass = repoHrefPrefix == null
-				? RelativeFileHrefProducer.class
-				: GithubURLHrefProducer.class;
+			? RelativeFileHrefProducer.class
+			: GithubURLHrefProducer.class;
 		modules.add(new DependencyGraphModule(hrefProducerClass, repoHrefPrefix));
 	}
 
 	private Diagnostic convertFileDiagnostic(FileDiagnostic fd) {
 		return new ValidationDiagnostic(
-			fd.getSeverity(), fd.getType(), fd.getMessage(), getSourceHrefPrefix(), getRelativePath(fd.getFile()),
-			fd.getLineNumber());
+			fd.getSeverity(), fd.getType(), fd.getMessage(), getSourceHrefPrefix(), getRelativePath(fd.getFile()), fd.getLineNumber());
 	}
 
 	private Diagnostic convertPuppetLintDiagnostic(File moduleRoot, Issue issue) {
 		return new ValidationDiagnostic(
-			getSeverity(issue), PuppetLintService.PUPPET_LINT, issue.getMessage(), getSourceHrefPrefix(),
-			getRelativePath(new File(moduleRoot, issue.getPath())), issue.getLineNumber());
+			getSeverity(issue), PuppetLintService.PUPPET_LINT, issue.getMessage(), getSourceHrefPrefix(), getRelativePath(new File(
+				moduleRoot, issue.getPath())), issue.getLineNumber());
 	}
 
-	private void geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result)
-			throws IOException {
+	private void geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result) throws IOException {
 
 		Diagnostic geppettoDiag = new Diagnostic();
 		Collection<File> importedModuleLocations = null;
@@ -155,8 +152,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 		if(checkModuleSemantics) {
 			File importedModulesDir = new File(getBuildDir(), IMPORTED_MODULES_ROOT);
-			importedModuleLocations = getForgeService(geppettoDiag).downloadDependencies(
-				metadatas, importedModulesDir, geppettoDiag);
+			importedModuleLocations = getForgeService(geppettoDiag).downloadDependencies(metadatas, importedModulesDir, geppettoDiag);
 		}
 		if(importedModuleLocations == null)
 			importedModuleLocations = Collections.emptyList();
@@ -212,8 +208,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		switch(issue.getSeverity()) {
 			case ERROR:
 				return puppetLintMaxSeverity == ValidationPreference.WARNING
-						? Diagnostic.WARNING
-						: Diagnostic.ERROR;
+					? Diagnostic.WARNING
+					: Diagnostic.ERROR;
 			default:
 				return Diagnostic.WARNING;
 		}
@@ -225,8 +221,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			if(sourceURI != null) {
 				Matcher m = GITHUB_REPO_URL_PATTERN.matcher(sourceURI);
 				if(m.find()) {
-					sourceHrefPrefix = String.format(
-						"https://github.com/%s/%s/blob/%s/", m.group(1), m.group(2), getBranchName());
+					sourceHrefPrefix = String.format("https://github.com/%s/%s/blob/%s/", m.group(1), m.group(2), getBranchName());
 				}
 				else
 					sourceHrefPrefix = sourceURI;
@@ -235,16 +230,15 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 				sourceHrefPrefix = "";
 		}
 		return sourceHrefPrefix.length() == 0
-				? null
-				: sourceHrefPrefix;
+			? null
+			: sourceHrefPrefix;
 	}
 
 	public SVGProducer getSVGProducer(Diagnostic diag) {
 		return getInjector(diag).getInstance(SVGProducer.class);
 	}
 
-	private ValidationOptions getValidationOptions(Collection<File> moduleLocations,
-			Collection<File> importedModuleLocations) {
+	private ValidationOptions getValidationOptions(Collection<File> moduleLocations, Collection<File> importedModuleLocations) {
 		ValidationOptions options = new ValidationOptions();
 		options.setCheckLayout(true);
 		options.setCheckModuleSemantics(checkModuleSemantics);
@@ -257,6 +251,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 		options.setPlatformURI(PuppetTarget.forComplianceLevel(complianceLevel, false).getPlatformURI());
 		options.setEncodingProvider(new IEncodingProvider() {
+			@Override
 			public String getEncoding(URI file) {
 				return UTF_8.name();
 			}
@@ -278,8 +273,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		FileUtils.rmR(getBuildDir());
 		Collection<File> moduleRoots = findModuleRoots(result);
 		if(moduleRoots.isEmpty()) {
-			result.addChild(new Diagnostic(
-				Diagnostic.ERROR, ValidationService.GEPPETTO, "No modules found in repository"));
+			result.addChild(new Diagnostic(Diagnostic.ERROR, ValidationService.GEPPETTO, "No modules found in repository"));
 			return result;
 		}
 

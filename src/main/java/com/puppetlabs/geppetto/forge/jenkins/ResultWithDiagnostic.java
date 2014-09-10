@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  * Contributors:
  *   Puppet Labs
  */
@@ -28,7 +28,7 @@ public class ResultWithDiagnostic<T> extends Diagnostic {
 
 	/**
 	 * Print the diagnostic children as a log output on the given <code>logger</code>
-	 * 
+	 *
 	 * @param logger
 	 */
 	public void log(PrintStream logger) {

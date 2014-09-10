@@ -31,8 +31,8 @@ import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
  * A default implementation of IPotentialProblemsAdvisor that returns Warnings for all potential problems, and
  * Ignore for all stylistic problems
  */
-public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor> implements ExtensionPoint,
-		Serializable, IPotentialProblemsAdvisor {
+public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor> implements ExtensionPoint, Serializable,
+		IPotentialProblemsAdvisor {
 
 	@Extension
 	public static class ProblemsAdvisorDescriptor extends Descriptor<PPProblemsAdvisor> {
@@ -112,8 +112,8 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 	private static String string(ValidationPreference pref) {
 		return pref == null
-				? "IGNORE"
-				: pref.name();
+			? "IGNORE"
+			: pref.name();
 	}
 
 	private static final IPotentialProblemsAdvisor defaults = PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(
@@ -173,15 +173,14 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	}
 
 	@DataBoundConstructor
-	public PPProblemsAdvisor(ValidationPreference assignmentToVarNamedString,
-			ValidationPreference assignmentToVarNamedTrusted, ValidationPreference booleansInStringForm,
-			ValidationPreference caseDefaultShouldAppearLast, ValidationPreference dqStringNotRequired,
-			ValidationPreference dqStringNotRequiredVariable, ValidationPreference ensureShouldAppearFirstInResource,
-			ValidationPreference importIsDeprecated, ValidationPreference interpolatedNonBraceEnclosedHyphens,
-			ValidationPreference missingDefaultInSelector, ValidationPreference mlComments,
-			ValidationPreference rightToLeftRelationships, ValidationPreference selectorDefaultShouldAppearLast,
-			ValidationPreference unbracedInterpolation, ValidationPreference unquotedResourceTitles,
-			ValidationPreference validityAssertedAtRuntime) {
+	public PPProblemsAdvisor(ValidationPreference assignmentToVarNamedString, ValidationPreference assignmentToVarNamedTrusted,
+			ValidationPreference booleansInStringForm, ValidationPreference caseDefaultShouldAppearLast,
+			ValidationPreference dqStringNotRequired, ValidationPreference dqStringNotRequiredVariable,
+			ValidationPreference ensureShouldAppearFirstInResource, ValidationPreference importIsDeprecated,
+			ValidationPreference interpolatedNonBraceEnclosedHyphens, ValidationPreference missingDefaultInSelector,
+			ValidationPreference mlComments, ValidationPreference rightToLeftRelationships,
+			ValidationPreference selectorDefaultShouldAppearLast, ValidationPreference unbracedInterpolation,
+			ValidationPreference unquotedResourceTitles, ValidationPreference validityAssertedAtRuntime) {
 		this.assignmentToVarNamedString = assignmentToVarNamedString;
 		this.assignmentToVarNamedTrusted = assignmentToVarNamedTrusted;
 		this.booleansInStringForm = booleansInStringForm;

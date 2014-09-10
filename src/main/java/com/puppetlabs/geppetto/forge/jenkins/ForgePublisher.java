@@ -89,15 +89,15 @@ public class ForgePublisher extends Builder {
 	private final String sourcePath;
 
 	@DataBoundConstructor
-	public ForgePublisher(String sourcePath, Boolean publishOnlyIfNoWarnings, String forgeOAuthToken,
-			String forgeServiceURL, String forgeLogin, String forgePassword) {
+	public ForgePublisher(String sourcePath, Boolean publishOnlyIfNoWarnings, String forgeOAuthToken, String forgeServiceURL,
+			String forgeLogin, String forgePassword) {
 		this.sourcePath = sourcePath;
 		this.forgeServiceURL = forgeServiceURL == null
-				? FORGE_SERVICE_URL
-				: forgeServiceURL;
+			? FORGE_SERVICE_URL
+			: forgeServiceURL;
 		this.publishOnlyIfNoWarnings = publishOnlyIfNoWarnings == null
-				? false
-				: publishOnlyIfNoWarnings.booleanValue();
+			? false
+			: publishOnlyIfNoWarnings.booleanValue();
 		this.forgeOAuthToken = forgeOAuthToken;
 		this.forgeLogin = forgeLogin;
 		this.forgePassword = forgePassword;
@@ -128,8 +128,8 @@ public class ForgePublisher extends Builder {
 	}
 
 	@Override
-	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, final BuildListener listener)
-			throws InterruptedException, IOException {
+	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, final BuildListener listener) throws InterruptedException,
+			IOException {
 
 		RepositoryInfo repoInfo = RepositoryInfo.getRepositoryInfo(build, listener);
 		FilePath moduleRoot;
