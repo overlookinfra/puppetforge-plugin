@@ -44,12 +44,32 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			return doFillValidationPreferenceItems(defaults.assignmentToVarNamedTrusted());
 		}
 
+		public ListBoxModel doFillAttributeIsNotStringItems() {
+			return doFillValidationPreferenceItems(defaults.attributeIsNotString());
+		}
+
 		public ListBoxModel doFillBooleansInStringFormItems() {
 			return doFillValidationPreferenceItems(defaults.booleansInStringForm());
 		}
 
 		public ListBoxModel doFillCaseDefaultShouldAppearLastItems() {
 			return doFillValidationPreferenceItems(defaults.caseDefaultShouldAppearLast());
+		}
+
+		public ListBoxModel doFillDeprecatedImportItems() {
+			return doFillValidationPreferenceItems(defaults.deprecatedImport());
+		}
+
+		public ListBoxModel doFillDeprecatedNodeInheritanceItems() {
+			return doFillValidationPreferenceItems(defaults.deprecatedNodeInheritance());
+		}
+
+		public ListBoxModel doFillDeprecatedPlusEqualsItems() {
+			return doFillValidationPreferenceItems(defaults.deprecatedPlusEquals());
+		}
+
+		public ListBoxModel doFillDeprecatedVariableNameItems() {
+			return doFillValidationPreferenceItems(defaults.deprecatedVariableName());
 		}
 
 		public ListBoxModel doFillDqStringNotRequiredItems() {
@@ -62,10 +82,6 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 		public ListBoxModel doFillEnsureShouldAppearFirstInResourceItems() {
 			return doFillValidationPreferenceItems(defaults.ensureShouldAppearFirstInResource());
-		}
-
-		public ListBoxModel doFillImportIsDeprecatedItems() {
-			return doFillValidationPreferenceItems(defaults.importIsDeprecated());
 		}
 
 		public ListBoxModel doFillInterpolatedNonBraceEnclosedHyphensItems() {
@@ -125,17 +141,25 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 	private final ValidationPreference assignmentToVarNamedTrusted;
 
+	private final ValidationPreference attributeIsNotString;
+
 	private final ValidationPreference booleansInStringForm;
 
 	private final ValidationPreference caseDefaultShouldAppearLast;
+
+	private final ValidationPreference deprecatedImport;
+
+	private final ValidationPreference deprecatedNodeInheritance;
+
+	private final ValidationPreference deprecatedPlusEquals;
+
+	private final ValidationPreference deprecatedVariableName;
 
 	private final ValidationPreference dqStringNotRequired;
 
 	private final ValidationPreference dqStringNotRequiredVariable;
 
 	private final ValidationPreference ensureShouldAppearFirstInResource;
-
-	private final ValidationPreference importIsDeprecated;
 
 	private final ValidationPreference interpolatedNonBraceEnclosedHyphens;
 
@@ -156,12 +180,16 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	public PPProblemsAdvisor() {
 		this.assignmentToVarNamedString = defaults.assignmentToVarNamedString();
 		this.assignmentToVarNamedTrusted = defaults.assignmentToVarNamedTrusted();
+		attributeIsNotString = defaults.attributeIsNotString();
 		this.booleansInStringForm = defaults.booleansInStringForm();
 		this.caseDefaultShouldAppearLast = defaults.caseDefaultShouldAppearLast();
 		this.dqStringNotRequired = defaults.dqStringNotRequired();
 		this.dqStringNotRequiredVariable = defaults.dqStringNotRequiredVariable();
 		this.ensureShouldAppearFirstInResource = defaults.ensureShouldAppearFirstInResource();
-		this.importIsDeprecated = defaults.importIsDeprecated();
+		this.deprecatedImport = defaults.deprecatedImport();
+		this.deprecatedNodeInheritance = defaults.deprecatedNodeInheritance();
+		this.deprecatedPlusEquals = defaults.deprecatedPlusEquals();
+		this.deprecatedVariableName = defaults.deprecatedVariableName();
 		this.interpolatedNonBraceEnclosedHyphens = defaults.interpolatedNonBraceEnclosedHyphens();
 		this.missingDefaultInSelector = defaults.missingDefaultInSelector();
 		this.mlComments = defaults.mlComments();
@@ -174,21 +202,27 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 
 	@DataBoundConstructor
 	public PPProblemsAdvisor(ValidationPreference assignmentToVarNamedString, ValidationPreference assignmentToVarNamedTrusted,
-			ValidationPreference booleansInStringForm, ValidationPreference caseDefaultShouldAppearLast,
-			ValidationPreference dqStringNotRequired, ValidationPreference dqStringNotRequiredVariable,
-			ValidationPreference ensureShouldAppearFirstInResource, ValidationPreference importIsDeprecated,
+			ValidationPreference attributeIsNotString, ValidationPreference booleansInStringForm,
+			ValidationPreference caseDefaultShouldAppearLast, ValidationPreference deprecatedImport,
+			ValidationPreference deprecatedNodeInheritance, ValidationPreference deprecatedPlusEquals,
+			ValidationPreference deprecatedVariableName, ValidationPreference dqStringNotRequired,
+			ValidationPreference dqStringNotRequiredVariable, ValidationPreference ensureShouldAppearFirstInResource,
 			ValidationPreference interpolatedNonBraceEnclosedHyphens, ValidationPreference missingDefaultInSelector,
 			ValidationPreference mlComments, ValidationPreference rightToLeftRelationships,
 			ValidationPreference selectorDefaultShouldAppearLast, ValidationPreference unbracedInterpolation,
 			ValidationPreference unquotedResourceTitles, ValidationPreference validityAssertedAtRuntime) {
 		this.assignmentToVarNamedString = assignmentToVarNamedString;
 		this.assignmentToVarNamedTrusted = assignmentToVarNamedTrusted;
+		this.attributeIsNotString = attributeIsNotString;
 		this.booleansInStringForm = booleansInStringForm;
 		this.caseDefaultShouldAppearLast = caseDefaultShouldAppearLast;
+		this.deprecatedImport = deprecatedImport;
+		this.deprecatedNodeInheritance = deprecatedNodeInheritance;
+		this.deprecatedPlusEquals = deprecatedPlusEquals;
+		this.deprecatedVariableName = deprecatedVariableName;
 		this.dqStringNotRequired = dqStringNotRequired;
 		this.dqStringNotRequiredVariable = dqStringNotRequiredVariable;
 		this.ensureShouldAppearFirstInResource = ensureShouldAppearFirstInResource;
-		this.importIsDeprecated = importIsDeprecated;
 		this.interpolatedNonBraceEnclosedHyphens = interpolatedNonBraceEnclosedHyphens;
 		this.missingDefaultInSelector = missingDefaultInSelector;
 		this.mlComments = mlComments;
@@ -210,6 +244,11 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	}
 
 	@Override
+	public ValidationPreference attributeIsNotString() {
+		return attributeIsNotString;
+	}
+
+	@Override
 	public ValidationPreference booleansInStringForm() {
 		return booleansInStringForm;
 	}
@@ -217,6 +256,26 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	@Override
 	public ValidationPreference caseDefaultShouldAppearLast() {
 		return caseDefaultShouldAppearLast;
+	}
+
+	@Override
+	public ValidationPreference deprecatedImport() {
+		return deprecatedImport;
+	}
+
+	@Override
+	public ValidationPreference deprecatedNodeInheritance() {
+		return deprecatedNodeInheritance;
+	}
+
+	@Override
+	public ValidationPreference deprecatedPlusEquals() {
+		return deprecatedPlusEquals;
+	}
+
+	@Override
+	public ValidationPreference deprecatedVariableName() {
+		return deprecatedVariableName;
 	}
 
 	@Override
@@ -249,6 +308,13 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	}
 
 	/**
+	 * @return the attributeIsNotString
+	 */
+	public String getAttributeIsNotString() {
+		return string(attributeIsNotString);
+	}
+
+	/**
 	 * @return the booleansInStringForm
 	 */
 	public String getBooleansInStringForm() {
@@ -260,6 +326,34 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	 */
 	public String getCaseDefaultShouldAppearLast() {
 		return string(caseDefaultShouldAppearLast);
+	}
+
+	/**
+	 * @return the deprecatedImport
+	 */
+	public String getDeprecatedImport() {
+		return string(deprecatedImport);
+	}
+
+	/**
+	 * @return the deprecatedNodeInheritance
+	 */
+	public String getDeprecatedNodeInheritance() {
+		return string(deprecatedNodeInheritance);
+	}
+
+	/**
+	 * @return the deprecatedPlusEquals
+	 */
+	public String getDeprecatedPlusEquals() {
+		return string(deprecatedPlusEquals);
+	}
+
+	/**
+	 * @return the deprecatedVariableName
+	 */
+	public String getDprecatedVariableName() {
+		return string(deprecatedVariableName);
 	}
 
 	/**
@@ -281,13 +375,6 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	 */
 	public String getEnsureShouldAppearFirstInResource() {
 		return string(ensureShouldAppearFirstInResource);
-	}
-
-	/**
-	 * @return the importIsDeprecated
-	 */
-	public String getImportIsDeprecated() {
-		return string(importIsDeprecated);
 	}
 
 	/**
@@ -344,11 +431,6 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	 */
 	public String getValidityAssertedAtRuntime() {
 		return string(validityAssertedAtRuntime);
-	}
-
-	@Override
-	public ValidationPreference importIsDeprecated() {
-		return importIsDeprecated;
 	}
 
 	@Override

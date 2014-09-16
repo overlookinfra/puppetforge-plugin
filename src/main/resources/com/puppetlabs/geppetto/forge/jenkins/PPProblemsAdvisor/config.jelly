@@ -1,50 +1,62 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <f:entry field="assignmentToVarNamedString" title="${%Assignment to $string}">
+  <f:entry field="assignmentToVarNamedString" title="${%assignmentToVarNamedString}">
     <f:select default="${descriptor.defaults.assignmentToVarNamedString}"/>
   </f:entry>
-  <f:entry field="assignmentToVarNamedTrusted" title="${%Assignment to $trusted}">
+  <f:entry field="assignmentToVarNamedTrusted" title="${%assignmentToVarNamedTrusted}">
     <f:select default="${descriptor.defaults.assignmentToVarNamedTrusted}"/>
   </f:entry>
-  <f:entry field="booleansInStringForm" title="${%Strings containing &quot;false&quot; or &quot;true&quot;}">
+  <f:entry field="attributeIsNotString" title="${%attributeIsNotString}">
+    <f:select default="${descriptor.defaults.attributeIsNotString}"/>
+  </f:entry>
+  <f:entry field="booleansInStringForm" title="${%booleansInStringForm}">
     <f:select default="${descriptor.defaults.booleansInStringForm}"/>
   </f:entry>
-  <f:entry field="caseDefaultShouldAppearLast" title="${%Case statement where a 'default' is not last}">
+  <f:entry field="caseDefaultShouldAppearLast" title="${%caseDefaultShouldAppearLast}">
     <f:select default="${descriptor.defaults.caseDefaultShouldAppearLast}"/>
   </f:entry>
-  <f:entry field="dqStringNotRequired" title="${%Strings that do not require double quoting}">
+  <f:entry field="deprecatedImport" title="${%deprecatedImport}">
+    <f:select default="${descriptor.defaults.deprecatedImport}"/>
+  </f:entry>
+  <f:entry field="deprecatedNodeInheritance" title="${%deprecatedNodeInheritance}">
+    <f:select default="${descriptor.defaults.deprecatedNodeInheritance}"/>
+  </f:entry>
+  <f:entry field="deprecatedPlusEquals" title="${%deprecatedPlusEquals}">
+    <f:select default="${descriptor.defaults.deprecatedPlusEquals}"/>
+  </f:entry>
+  <f:entry field="deprecatedVariableName" title="${%deprecatedVariableName}">
+    <f:select default="${descriptor.defaults.deprecatedVariableName}"/>
+  </f:entry>
+  <f:entry field="dqStringNotRequired" title="${%dqStringNotRequired}">
     <f:select default="${descriptor.defaults.dqStringNotRequired}"/>
   </f:entry>
-  <f:entry field="dqStringNotRequiredVariable" title="${%Strings containing a single interpolation}">
+  <f:entry field="dqStringNotRequiredVariable" title="${%dqStringNotRequiredVariable}">
     <f:select default="${descriptor.defaults.dqStringNotRequiredVariable}"/>
   </f:entry>
-  <f:entry field="ensureShouldAppearFirstInResource" title="${%Resource property ensure is not stated first}">
+  <f:entry field="ensureShouldAppearFirstInResource" title="${%ensureShouldAppearFirstInResource}">
     <f:select default="${descriptor.defaults.ensureShouldAppearFirstInResource}"/>
   </f:entry>
-  <f:entry field="importIsDeprecated" title="${%Use of deprecated keyword 'import'}">
-    <f:select default="${descriptor.defaults.importIsDeprecated}"/>
-  </f:entry>
-  <f:entry field="interpolatedNonBraceEnclosedHyphens" title="${%Interpolated hyphen without surrounding {}}">
+  <f:entry field="interpolatedNonBraceEnclosedHyphens" title="${%interpolatedNonBraceEnclosedHyphens}">
     <f:select default="${descriptor.defaults.interpolatedNonBraceEnclosedHyphens}"/>
   </f:entry>
-  <f:entry field="missingDefaultInSelector" title="${%Missing 'default' in selector}">
+  <f:entry field="missingDefaultInSelector" title="${%missingDefaultInSelector}">
     <f:select default="${descriptor.defaults.missingDefaultInSelector}"/>
   </f:entry>
-  <f:entry field="mlComments" title="${%Comments using /* */}">
+  <f:entry field="mlComments" title="${%mlComments}">
     <f:select default="${descriptor.defaults.mlComments}"/>
   </f:entry>
-  <f:entry field="rightToLeftRelationships" title="${%Right to left relationships using &lt;- or &lt;~}">
+  <f:entry field="rightToLeftRelationships" title="${%rightToLeftRelationships}">
     <f:select default="${descriptor.defaults.rightToLeftRelationships}"/>
   </f:entry>
-  <f:entry field="selectorDefaultShouldAppearLast" title="${%Selector expression where a 'default' is not last}">
+  <f:entry field="selectorDefaultShouldAppearLast" title="${%selectorDefaultShouldAppearLast}">
     <f:select default="${descriptor.defaults.selectorDefaultShouldAppearLast}"/>
   </f:entry>
-  <f:entry field="unbracedInterpolation" title="${%Interpolated variables without braces}">
+  <f:entry field="unbracedInterpolation" title="${%unbracedInterpolation}">
     <f:select default="${descriptor.defaults.unbracedInterpolation}"/>
   </f:entry>
-  <f:entry field="unquotedResourceTitles" title="${%Unquoted resource titles}">
+  <f:entry field="unquotedResourceTitles" title="${%unquotedResourceTitles}">
     <f:select default="${descriptor.defaults.unquotedResourceTitles}"/>
   </f:entry>
-  <f:entry field="validityAssertedAtRuntime" title="${%Validity cannot be asserted until runtime}">
+  <f:entry field="validityAssertedAtRuntime" title="${%validityAssertedAtRuntime}">
     <f:select default="${descriptor.defaults.validityAssertedAtRuntime}"/>
   </f:entry>
 </j:jelly>

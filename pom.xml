@@ -27,9 +27,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.net.id>thhal</java.net.id>
-		<geppetto.version>4.3.0-SNAPSHOT</geppetto.version>
+		<geppetto.version>4.3.0</geppetto.version>
 		<emf.version>2.10.0-v20140514-1158</emf.version>
-		<xtext.version>2.6.2-v201407030533</xtext.version>
+		<xtext.version>2.7.1-v201409090713</xtext.version>
 		<nexusServer>https://geppetto-nexus.puppetlabs.com</nexusServer>
 	</properties>
 
