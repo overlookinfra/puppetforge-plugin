@@ -12,6 +12,22 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
 	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
+	<style type="text/css">
+		#validationDiagnosticsTable {
+		    border-collapse: collapse;
+		    table-layout: fixed;
+		}
+		td.pane {
+		    border:        1px solid #bbb;
+		    white-space:   nowrap;
+		    overflow:      hidden;
+		    text-overflow: ellipsis;
+		}
+		#main-panel-content {
+			overflow: auto;
+		}
+	</style>
+ 
 	<l:layout title="Puppet Forge Validation">
 		<st:include page="sidepanel.jelly" it="${it.build}"/>
 		<l:main-panel>
@@ -28,21 +44,21 @@
 			<h2>Diagnostics</h2>
 			<j:choose>
 				<j:when test="${it.resultDiagnosticsCount != 0}">
-					<table id="validationDiagnosticsTable" border="1px" class="pane sortable" style="table-layout:fixed;">
+					<table id="validationDiagnosticsTable" class="pane sortable">
 						<thead>
 							<tr>
-								<td class="pane-header" style="width:60px">Severity</td>
-								<td class="pane-header">Description</td>
-								<td class="pane-header" style="width:45%">Location</td>
+								<th width="80px" class="pane-header">Severity</th>
+								<th width="60%" class="pane-header">Description</th>
+								<th class="pane-header">Location</th>
 							</tr>
 						</thead>
 						<tbody>
 							<j:forEach var="diag" items="${it.resultDiagnostics}">
 								<j:if test="${diag.path != null}">
 									<tr>
-										<td style="overflow:hidden">${diag.severityString}</td>
-										<td style="overflow:hidden;text-overflow:ellipsis">${diag.message}</td>
-										<td style="overflow:hidden;text-overflow:ellipsis">
+										<td class="pane">${diag.severityString}</td>
+										<td title="${diag.message}" class="pane">${diag.message}</td>
+										<td class="pane">
 											<j:choose>
 												<j:when test="${diag.line > 0}">
 													<a href="${diag.hrefPrefix}${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>

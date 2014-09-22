@@ -70,6 +70,8 @@ public class RepositoryInfo {
 			branchName = branchSpec.getName();
 			if("**".equals(branchName))
 				branchName = Constants.MASTER;
+			else if(branchName.startsWith("*/"))
+				branchName = branchName.substring(2);
 		}
 		else {
 			listener.error("Sorry, but publishing from multiple branches is not supported");

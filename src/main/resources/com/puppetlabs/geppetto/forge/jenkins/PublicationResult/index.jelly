@@ -12,24 +12,33 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define"
 	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
+	<style type="text/css">
+		table {
+		    border-collapse: collapse;
+		}
+		th, td {
+		    border: 1px solid #bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+		}
+	</style>
+ 
 	<l:layout title="${it.title}">
 		<st:include page="sidepanel.jelly" it="${it.build}"/>
 		<l:main-panel>
 			<h1>${it.title}</h1>
 			<j:choose>
 				<j:when test="${it.resultDiagnosticsCount != 0}">
-					<table id="publicationResultTable" border="1px" class="pane sortable" style="table-layout:fixed;">
+					<table id="publicationResultTable" class="pane sortable">
 						<thead>
 							<tr>
-								<td class="pane-header" style="width:60px">Severity</td>
+								<td class="pane-header">Severity</td>
 								<td class="pane-header">Description</td>
 							</tr>
 						</thead>
 						<tbody>
 							<j:forEach var="diag" items="${it.resultDiagnostics}">
 								<tr>
-									<td style="overflow:hidden">${diag.severityString}</td>
-									<td style="overflow:hidden;text-overflow:ellipsis">${diag.message}</td>
+									<td>${diag.severityString}</td>
+									<td>${diag.message}</td>
 								</tr>
 							</j:forEach>
 						</tbody>
