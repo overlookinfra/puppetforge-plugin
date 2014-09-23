@@ -78,8 +78,6 @@ public class ForgePublisher extends Builder {
 
 	private final boolean publishOnlyIfNoWarnings;
 
-	private final String forgeOAuthToken;
-
 	private final String forgeLogin;
 
 	private final String forgePassword;
@@ -89,8 +87,8 @@ public class ForgePublisher extends Builder {
 	private final String sourcePath;
 
 	@DataBoundConstructor
-	public ForgePublisher(String sourcePath, Boolean publishOnlyIfNoWarnings, String forgeOAuthToken, String forgeServiceURL,
-			String forgeLogin, String forgePassword) {
+	public ForgePublisher(String sourcePath, Boolean publishOnlyIfNoWarnings, String forgeServiceURL, String forgeLogin,
+			String forgePassword) {
 		this.sourcePath = sourcePath;
 		this.forgeServiceURL = forgeServiceURL == null
 			? FORGE_SERVICE_URL
@@ -98,17 +96,12 @@ public class ForgePublisher extends Builder {
 		this.publishOnlyIfNoWarnings = publishOnlyIfNoWarnings == null
 			? false
 			: publishOnlyIfNoWarnings.booleanValue();
-		this.forgeOAuthToken = forgeOAuthToken;
 		this.forgeLogin = forgeLogin;
 		this.forgePassword = forgePassword;
 	}
 
 	public String getForgeLogin() {
 		return forgeLogin;
-	}
-
-	public String getForgeOAuthToken() {
-		return forgeOAuthToken;
 	}
 
 	public String getForgePassword() {

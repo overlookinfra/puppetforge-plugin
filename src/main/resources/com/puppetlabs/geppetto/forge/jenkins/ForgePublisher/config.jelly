@@ -33,8 +33,5 @@
   <f:entry title="Forge password" field="forgePassword">
     <f:password />
   </f:entry>
-  <f:entry title="Forge OAuth token" field="forgeOAuthToken">
-    <f:password />
-  </f:entry>
 
 </j:jelly>
