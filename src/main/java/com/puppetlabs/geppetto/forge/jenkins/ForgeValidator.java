@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 
@@ -37,6 +38,8 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
@@ -58,9 +61,9 @@ public class ForgeValidator extends Builder {
 			return checkURL(value);
 		}
 
-		public FormValidation doCheckPuppetLintOptions(String puppetLintOptions, FormValidation validationResult) {
+		public FormValidation doCheckPuppetLintOptions(@QueryParameter String value) throws IOException, ServletException {
 			try {
-				parsePuppetLintOptions(puppetLintOptions);
+				parsePuppetLintOptions(value, new boolean[1]);
 				return FormValidation.ok();
 			}
 			catch(FormValidation e) {
@@ -80,7 +83,7 @@ public class ForgeValidator extends Builder {
 		}
 
 		public ListBoxModel doFillPuppetLintMaxSeverityItems() {
-			return doFillValidationPreferenceItems(ValidationPreference.IGNORE);
+			return doFillValidationPreferenceItems();
 		}
 
 		/**
@@ -120,10 +123,20 @@ public class ForgeValidator extends Builder {
 		}
 	}
 
-	public static ListBoxModel doFillValidationPreferenceItems(ValidationPreference dflt) {
+	private static void appendOption(Option option, StringBuilder bld) {
+		String on = option.toString();
+		// Option string starts with "no-" and ends with "-check". We strip that
+		// before comparing.
+		if(on.startsWith("no-") && on.endsWith("-check"))
+			bld.append(on, 3, on.length() - 6);
+		else
+			bld.append(on);
+	}
+
+	public static ListBoxModel doFillValidationPreferenceItems() {
 		List<hudson.util.ListBoxModel.Option> items = new ArrayList<hudson.util.ListBoxModel.Option>();
 		for(ValidationPreference pref : ValidationPreference.values())
-			items.add(new hudson.util.ListBoxModel.Option(pref.toString(), pref.name(), pref == dflt));
+			items.add(new hudson.util.ListBoxModel.Option(pref.toString(), pref.name()));
 		return new ListBoxModel(items);
 	}
 
@@ -133,13 +146,13 @@ public class ForgeValidator extends Builder {
 			String on = option.toString();
 			// Option string starts with "no-" and ends with "-check". We strip that
 			// before comparing.
-			if(on.startsWith("no-") && on.substring(3, on.length() - 6).equalsIgnoreCase(s))
+			if(on.startsWith("no-") && on.endsWith("-check") && on.substring(3, on.length() - 6).equalsIgnoreCase(s))
 				return option;
 		}
 		throw new IllegalArgumentException("The string '" + s + "' does not represent a known puppet-lint option");
 	}
 
-	static Option[] parsePuppetLintOptions(String puppetLintOptions) throws FormValidation {
+	static Option[] parsePuppetLintOptions(String puppetLintOptions, boolean[] inverse) throws FormValidation {
 		if(puppetLintOptions != null) {
 			puppetLintOptions = puppetLintOptions.trim();
 			if(puppetLintOptions.length() == 0)
@@ -180,14 +193,7 @@ public class ForgeValidator extends Builder {
 		if(!allValid)
 			throw validationResult;
 
-		if(!isNegative) {
-			// Inverse the list of options
-			ArrayList<Option> inverseList = new ArrayList<Option>();
-			for(Option option : Option.values())
-				if(!optionList.contains(option))
-					inverseList.add(option);
-			optionList = inverseList;
-		}
+		inverse[0] = isNegative;
 		return optionList.toArray(new Option[optionList.size()]);
 	}
 
@@ -198,6 +204,8 @@ public class ForgeValidator extends Builder {
 	private final boolean checkReferences;
 
 	private final boolean checkModuleSemantics;
+
+	private final boolean inverseOptions;
 
 	private final PPProblemsAdvisor problemsAdvisor;
 
@@ -233,7 +241,9 @@ public class ForgeValidator extends Builder {
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity == null
 			? ValidationPreference.IGNORE
 			: puppetLintMaxSeverity;
-		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions);
+		boolean[] inverse = new boolean[1];
+		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions, inverse);
+		inverseOptions = inverse[0];
 	}
 
 	public String getComplianceLevel() {
@@ -263,12 +273,14 @@ public class ForgeValidator extends Builder {
 	}
 
 	public String getPuppetLintOptions() {
-		if(puppetLintOptions == null || puppetLintOptions.length == 0)
-			return null;
-		StringBuilder bld = new StringBuilder(puppetLintOptions[0].toString());
-		for(int idx = 1; idx < puppetLintOptions.length; ++idx) {
-			bld.append(',');
-			bld.append(puppetLintOptions[idx]);
+		StringBuilder bld = new StringBuilder();
+		if(inverseOptions)
+			bld.append('-');
+		for(int idx = 0; idx < puppetLintOptions.length; ++idx) {
+			Option option = puppetLintOptions[idx];
+			if(idx > 0)
+				bld.append(',');
+			appendOption(option, bld);
 		}
 		return bld.toString();
 	}
@@ -312,9 +324,24 @@ public class ForgeValidator extends Builder {
 		if(sourcePath != null)
 			moduleRoot = moduleRoot.child(sourcePath);
 
+		Option[] lintOptions = null;
+		if(puppetLintMaxSeverity != ValidationPreference.IGNORE) {
+			if(inverseOptions)
+				lintOptions = puppetLintOptions;
+			else {
+				// Options are negative so inverse the list of options when positive
+				Set<Option> optionSet = Sets.newHashSet(puppetLintOptions);
+				List<Option> optionList = Lists.newArrayList();
+				for(Option option : Option.values())
+					if(option != Option.FailOnWarnings && !optionSet.contains(option))
+						optionList.add(option);
+				lintOptions = optionList.toArray(new Option[optionList.size()]);
+			}
+		}
+
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
 			forgeServiceURL, sourceURI, branch, complianceLevel, checkReferences, checkModuleSemantics, getProblemsAdvisor(),
-			getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, puppetLintOptions));
+			getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, lintOptions));
 
 		// Emit non-validation diagnostics to the console
 		boolean validationErrors = false;

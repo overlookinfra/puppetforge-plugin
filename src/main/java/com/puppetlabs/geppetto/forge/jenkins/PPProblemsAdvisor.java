@@ -37,83 +37,83 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	@Extension
 	public static class ProblemsAdvisorDescriptor extends Descriptor<PPProblemsAdvisor> {
 		public ListBoxModel doFillAssignmentToVarNamedStringItems() {
-			return doFillValidationPreferenceItems(defaults.assignmentToVarNamedString());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillAssignmentToVarNamedTrustedItems() {
-			return doFillValidationPreferenceItems(defaults.assignmentToVarNamedTrusted());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillAttributeIsNotStringItems() {
-			return doFillValidationPreferenceItems(defaults.attributeIsNotString());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillBooleansInStringFormItems() {
-			return doFillValidationPreferenceItems(defaults.booleansInStringForm());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillCaseDefaultShouldAppearLastItems() {
-			return doFillValidationPreferenceItems(defaults.caseDefaultShouldAppearLast());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDeprecatedImportItems() {
-			return doFillValidationPreferenceItems(defaults.deprecatedImport());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDeprecatedNodeInheritanceItems() {
-			return doFillValidationPreferenceItems(defaults.deprecatedNodeInheritance());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDeprecatedPlusEqualsItems() {
-			return doFillValidationPreferenceItems(defaults.deprecatedPlusEquals());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDeprecatedVariableNameItems() {
-			return doFillValidationPreferenceItems(defaults.deprecatedVariableName());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDqStringNotRequiredItems() {
-			return doFillValidationPreferenceItems(defaults.dqStringNotRequired());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDqStringNotRequiredVariableItems() {
-			return doFillValidationPreferenceItems(defaults.dqStringNotRequiredVariable());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillEnsureShouldAppearFirstInResourceItems() {
-			return doFillValidationPreferenceItems(defaults.ensureShouldAppearFirstInResource());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillInterpolatedNonBraceEnclosedHyphensItems() {
-			return doFillValidationPreferenceItems(defaults.interpolatedNonBraceEnclosedHyphens());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillMissingDefaultInSelectorItems() {
-			return doFillValidationPreferenceItems(defaults.missingDefaultInSelector());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillMlCommentsItems() {
-			return doFillValidationPreferenceItems(defaults.mlComments());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillRightToLeftRelationshipsItems() {
-			return doFillValidationPreferenceItems(defaults.rightToLeftRelationships());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillSelectorDefaultShouldAppearLastItems() {
-			return doFillValidationPreferenceItems(defaults.selectorDefaultShouldAppearLast());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillUnbracedInterpolationItems() {
-			return doFillValidationPreferenceItems(defaults.unbracedInterpolation());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillUnquotedResourceTitlesItems() {
-			return doFillValidationPreferenceItems(defaults.unquotedResourceTitles());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillValidityAssertedAtRuntimeItems() {
-			return doFillValidationPreferenceItems(defaults.validityAssertedAtRuntime());
+			return doFillValidationPreferenceItems();
 		}
 
 		public IPotentialProblemsAdvisor getDefaults() {
@@ -180,7 +180,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	public PPProblemsAdvisor() {
 		this.assignmentToVarNamedString = defaults.assignmentToVarNamedString();
 		this.assignmentToVarNamedTrusted = defaults.assignmentToVarNamedTrusted();
-		attributeIsNotString = defaults.attributeIsNotString();
+		this.attributeIsNotString = defaults.attributeIsNotString();
 		this.booleansInStringForm = defaults.booleansInStringForm();
 		this.caseDefaultShouldAppearLast = defaults.caseDefaultShouldAppearLast();
 		this.dqStringNotRequired = defaults.dqStringNotRequired();

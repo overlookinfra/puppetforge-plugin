@@ -11,16 +11,14 @@
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeValidator.doFillValidationPreferenceItems;
 import hudson.Extension;
 import hudson.ExtensionPoint;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.util.ListBoxModel;
-import hudson.util.ListBoxModel.Option;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -38,58 +36,51 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 	public static class ModuleValidationAdvisorDescriptor extends Descriptor<ModuleValidationAdvisor> {
 
 		public ListBoxModel doFillCircularDependencyItems() {
-			return doFillValidationPreferenceItems(defaults.getCircularDependency());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDependencyVersionMismatchItems() {
-			return doFillValidationPreferenceItems(defaults.getDependencyVersionMismatch());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillDeprecatedKeyItems() {
-			return doFillValidationPreferenceItems(defaults.getDeprecatedKey());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillMissingForgeRequiredFieldsItems() {
-			return doFillValidationPreferenceItems(defaults.getMissingForgeRequiredFields());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillModulefileExistsAndIsUsedItems() {
-			return doFillValidationPreferenceItems(defaults.getModulefileExistsAndIsUsed());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillModulefileExistsItems() {
-			return doFillValidationPreferenceItems(defaults.getModulefileExists());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillModuleNameNotStrictItems() {
-			return doFillValidationPreferenceItems(defaults.getModuleNameNotStrict());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillModuleRedefinitionItems() {
-			return doFillValidationPreferenceItems(defaults.getModuleRedefinition());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillUnexpectedSubmoduleItems() {
-			return doFillValidationPreferenceItems(defaults.getUnexpectedSubmodule());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillUnrecognizedKeyItems() {
-			return doFillValidationPreferenceItems(defaults.getUnrecognizedKey());
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillUnresolvedReferenceItems() {
-			return doFillValidationPreferenceItems(defaults.getUnresolvedReference());
-		}
-
-		public ListBoxModel doFillValidationPreferenceItems(ValidationPreference dflt) {
-			List<Option> items = new ArrayList<Option>();
-			for(ValidationPreference pref : ValidationPreference.values())
-				items.add(new Option(pref.toString(), pref.name(), pref == dflt));
-			return new ListBoxModel(items);
+			return doFillValidationPreferenceItems();
 		}
 
 		public ListBoxModel doFillWhitespaceInTagItems() {
-			return doFillValidationPreferenceItems(defaults.getWhitespaceInTag());
+			return doFillValidationPreferenceItems();
 		}
 
 		public IModuleValidationAdvisor getDefaults() {
@@ -129,86 +120,86 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 	}
 
 	/**
-	 * @return the assignmentToVarNamedString
+	 * @return the circularDependency
 	 */
-	public String getAssignmentToVarNamedString() {
+	public String getCircularDependency() {
 		return advisor.getCircularDependency().name();
 	}
 
 	/**
-	 * @return the assignmentToVarNamedTrusted
+	 * @return the dependencyVersionMismatch
 	 */
-	public String getAssignmentToVarNamedTrusted() {
+	public String getDependencyVersionMismatch() {
 		return advisor.getDependencyVersionMismatch().name();
 	}
 
 	/**
-	 * @return the booleansInStringForm
+	 * @return the deprecatedKey
 	 */
-	public String getBooleansInStringForm() {
+	public String getDeprecatedKey() {
 		return advisor.getDeprecatedKey().name();
 	}
 
 	/**
-	 * @return the caseDefaultShouldAppearLast
+	 * @return the missingForgeRequiredFields
 	 */
-	public String getCaseDefaultShouldAppearLast() {
+	public String getMissingForgeRequiredFields() {
 		return advisor.getMissingForgeRequiredFields().name();
 	}
 
 	/**
-	 * @return the dqStringNotRequired
+	 * @return the modulefileExists
 	 */
-	public String getDqStringNotRequired() {
+	public String getModulefileExists() {
 		return advisor.getModulefileExists().name();
 	}
 
 	/**
-	 * @return the dqStringNotRequiredVariable
+	 * @return the modulefileExistsAndIsUsed
 	 */
-	public String getDqStringNotRequiredVariable() {
+	public String getModulefileExistsAndIsUsed() {
 		return advisor.getModulefileExistsAndIsUsed().name();
 	}
 
 	/**
-	 * @return the ensureShouldAppearFirstInResource
+	 * @return the moduleNameNotStrict
 	 */
-	public String getEnsureShouldAppearFirstInResource() {
+	public String getModuleNameNotStrict() {
 		return advisor.getModuleNameNotStrict().name();
 	}
 
 	/**
-	 * @return the interpolatedNonBraceEnclosedHyphens
+	 * @return the moduleRedefinition
 	 */
-	public String getInterpolatedNonBraceEnclosedHyphens() {
+	public String getModuleRedefinition() {
 		return advisor.getModuleRedefinition().name();
 	}
 
 	/**
-	 * @return the missingDefaultInSelector
+	 * @return the unexpectedSubmodule
 	 */
-	public String getMissingDefaultInSelector() {
+	public String getUnexpectedSubmodule() {
 		return advisor.getUnexpectedSubmodule().name();
 	}
 
 	/**
-	 * @return the mlComments
+	 * @return the unrecognizedKey
 	 */
-	public String getMlComments() {
+	public String getUnrecognizedKey() {
 		return advisor.getUnrecognizedKey().name();
 	}
 
 	/**
-	 * @return the rightToLeftRelationships
+	 * @return the unresolvedReference
 	 */
-	public String getRightToLeftRelationships() {
+	public String getUnresolvedReference() {
 		return advisor.getUnresolvedReference().name();
 	}
 
 	/**
-	 * @return the selectorDefaultShouldAppearLast
+	 * @return the whitespaceInTag
 	 */
-	public String getSelectorDefaultShouldAppearLast() {
+	public String getWhitespaceInTag() {
 		return advisor.getWhitespaceInTag().name();
 	}
 }
