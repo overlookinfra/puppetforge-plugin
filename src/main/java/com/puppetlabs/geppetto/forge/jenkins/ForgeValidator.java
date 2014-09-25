@@ -298,7 +298,14 @@ public class ForgeValidator extends Builder {
 			branch = repoInfo.getBranchName();
 		}
 		else {
-			sourceURI = build.getProject().getAbsoluteUrl() + "ws/";
+			StringBuilder bld = new StringBuilder(build.getProject().getAbsoluteUrl());
+			bld.append("ws/");
+			if(sourcePath != null) {
+				bld.append(sourcePath);
+				if(bld.charAt(bld.length() - 1) != '/')
+					bld.append('/');
+			}
+			sourceURI = bld.toString();
 			moduleRoot = build.getWorkspace();
 			branch = null;
 		}
