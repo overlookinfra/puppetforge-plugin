@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
- Copyright (c) 2014 Puppet Labs, Inc. and other contributors, as listed below.
- All rights reserved. This program and the accompanying materials
- are made available under the terms of the Eclipse Public License v1.0
- which accompanies this distribution, and is available at
- http://www.eclipse.org/legal/epl-v10.html
- 
- Contributors:
-   Puppet Labs
- -->
+<!-- Copyright (c) 2014 Puppet Labs, Inc. and other contributors, as listed 
+	below. All rights reserved. This program and the accompanying materials are 
+	made available under the terms of the Eclipse Public License v1.0 which accompanies 
+	this distribution, and is available at http://www.eclipse.org/legal/epl-v10.html 
+	Contributors: Puppet Labs -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
@@ -27,7 +22,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.net.id>thhal</java.net.id>
-		<geppetto.version>4.3.0</geppetto.version>
+		<geppetto.version>4.3.1-SNAPSHOT</geppetto.version>
 		<emf.version>2.10.0-v20140514-1158</emf.version>
 		<xtext.version>2.7.1-v201409090713</xtext.version>
 		<nexusServer>https://geppetto-nexus.puppetlabs.com</nexusServer>
@@ -92,7 +87,8 @@
 				<groupId>org.jenkins-ci.tools</groupId>
 				<artifactId>maven-hpi-plugin</artifactId>
 				<configuration>
-					<maskClasses>org.apache.log4j.</maskClasses>
+					<pluginFirstClassLoader>true</pluginFirstClassLoader>
+					<globalMaskClasses>org.apache.log4j.</globalMaskClasses>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -192,6 +188,12 @@
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.pp.dsl</artifactId>
 			<version>${geppetto.version}</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>org.apache.log4j</artifactId>
+					<groupId>org.apache.log4j</groupId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
@@ -279,6 +281,11 @@
 			<groupId>org.eclipse.jgit</groupId>
 			<artifactId>org.eclipse.jgit</artifactId>
 			<version>3.4.1.201406201815-r</version>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
 		</dependency>
 	</dependencies>
 </project>
