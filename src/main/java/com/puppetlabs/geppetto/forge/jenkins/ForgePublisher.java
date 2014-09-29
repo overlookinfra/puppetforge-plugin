@@ -164,6 +164,16 @@ public class ForgePublisher extends Builder {
 		Diagnostic publishingResult = moduleRoot.act(new ForgePublisherCallable(
 			forgeLogin, forgePassword, forgeServiceURL, sourceURI, branch));
 
+		// Copy errors to the console
+		for(Diagnostic diag : publishingResult)
+			switch(diag.getSeverity()) {
+				case Diagnostic.ERROR:
+					listener.error(diag.getMessage());
+					break;
+				case Diagnostic.FATAL:
+					listener.fatalError(diag.getMessage());
+			}
+
 		PublicationResult data = new PublicationResult(build, publishingResult);
 		build.addAction(data);
 		return publishingResult.getSeverity() < Diagnostic.ERROR;
