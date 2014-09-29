@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.puppetlabs.geppetto.common.os.FileUtils;
 import com.puppetlabs.geppetto.common.os.StreamUtil.OpenBAStream;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
+import com.puppetlabs.geppetto.diagnostic.ExceptionDiagnostic;
 import com.puppetlabs.geppetto.diagnostic.FileDiagnostic;
 import com.puppetlabs.geppetto.forge.model.Metadata;
 import com.puppetlabs.geppetto.graph.DependencyGraphProducer;
@@ -283,14 +284,19 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		return result;
 	}
 
-	private void lintValidation(Collection<File> moduleLocations, Diagnostic result) throws IOException {
+	private void lintValidation(Collection<File> moduleLocations, Diagnostic result) {
 		PuppetLintRunner runner = PuppetLintService.getInstance().getPuppetLintRunner();
-		for(File moduleRoot : moduleLocations) {
-			for(PuppetLintRunner.Issue issue : runner.run(moduleRoot, puppetLintOptions)) {
-				Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, issue);
-				if(diag != null)
-					result.addChild(diag);
+		try {
+			for(File moduleRoot : moduleLocations) {
+				for(PuppetLintRunner.Issue issue : runner.run(moduleRoot, puppetLintOptions)) {
+					Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, issue);
+					if(diag != null)
+						result.addChild(diag);
+				}
 			}
+		}
+		catch(IOException e) {
+			result.addChild(new ExceptionDiagnostic(Diagnostic.ERROR, PuppetLintService.PUPPET_LINT, e.getMessage(), e));
 		}
 	}
 
