@@ -50,7 +50,6 @@ import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLe
 import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Issue;
-import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Option;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintService;
 import com.puppetlabs.geppetto.ruby.RubyHelper;
 import com.puppetlabs.geppetto.ruby.jrubyparser.JRubyServices;
@@ -80,7 +79,9 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private ValidationPreference puppetLintMaxSeverity;
 
-	private Option[] puppetLintOptions;
+	private boolean puppetLintInverseOptions;
+
+	private String[] puppetLintOptions;
 
 	private IPotentialProblemsAdvisor problemsAdvisor;
 
@@ -93,7 +94,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, String branchName, ComplianceLevel complianceLevel,
 			boolean checkReferences, boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor,
-			IModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, Option[] puppetLintOptions) {
+			IModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions,
+			String[] puppetLintOptions) {
 		super(forgeServiceURL, sourceURI, branchName);
 		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
@@ -101,6 +103,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		this.problemsAdvisor = problemsAdvisor;
 		this.moduleValidationAdvisor = moduleValidationAdvisor;
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity;
+		this.puppetLintInverseOptions = puppetLintInverseOptions;
 		this.puppetLintOptions = puppetLintOptions;
 	}
 
@@ -288,7 +291,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		PuppetLintRunner runner = PuppetLintService.getInstance().getPuppetLintRunner();
 		try {
 			for(File moduleRoot : moduleLocations) {
-				for(PuppetLintRunner.Issue issue : runner.run(moduleRoot, puppetLintOptions)) {
+				for(PuppetLintRunner.Issue issue : runner.run(moduleRoot, puppetLintInverseOptions, puppetLintOptions)) {
 					Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, issue);
 					if(diag != null)
 						result.addChild(diag);
