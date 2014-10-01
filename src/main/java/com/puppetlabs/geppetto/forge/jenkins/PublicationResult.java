@@ -31,9 +31,12 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 
 	private final AbstractBuild<?, ?> build;
 
+	private final int cardinal;
+
 	public PublicationResult(AbstractBuild<?, ?> build, Diagnostic diagnostic) {
 		this.build = build;
 		this.diagnostic = diagnostic;
+		this.cardinal = build.getActions(PublicationResult.class).size();
 	}
 
 	@Override
@@ -118,7 +121,9 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 	}
 
 	public String getTitle() {
-		return "Publication Result";
+		return build.getActions(PublicationResult.class).size() <= 1
+			? "Publication Result"
+			: "Publication Result (" + (cardinal + 1) + ')';
 	}
 
 	protected String getUrlFor(String item) {
@@ -127,6 +132,8 @@ public class PublicationResult implements Action, Serializable, Cloneable {
 
 	@Override
 	public String getUrlName() {
-		return "publicationReport";
+		return build.getActions(PublicationResult.class).size() <= 1
+			? "publicationReport"
+			: "publicationReport" + (cardinal + 1);
 	}
 }

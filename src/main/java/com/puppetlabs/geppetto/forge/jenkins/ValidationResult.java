@@ -37,8 +37,11 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	private final AbstractBuild<?, ?> build;
 
+	private final int cardinal;
+
 	public ValidationResult(AbstractBuild<?, ?> build) {
 		this.build = build;
+		this.cardinal = build.getActions(ValidationResult.class).size();
 	}
 
 	@Override
@@ -170,7 +173,9 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 	}
 
 	public String getTitle() {
-		return "Validation Result";
+		return build.getActions(ValidationResult.class).size() <= 1
+			? "Validation Result"
+			: "Validation Result (" + (cardinal + 1) + ')';
 	}
 
 	protected String getUrlFor(String item) {
@@ -179,7 +184,9 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	@Override
 	public String getUrlName() {
-		return "validationReport";
+		return build.getActions(ValidationResult.class).size() <= 1
+			? "validationReport"
+			: "validationReport_" + (cardinal + 1);
 	}
 
 	public String getValidationGraphURL() {
