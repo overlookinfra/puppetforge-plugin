@@ -83,7 +83,7 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 			return doFillValidationPreferenceItems();
 		}
 
-		public IModuleValidationAdvisor getDefaults() {
+		public ModuleValidationAdvisor getDefaults() {
 			return defaults;
 		}
 
@@ -93,14 +93,14 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 		}
 	}
 
-	private static final IModuleValidationAdvisor defaults = new DefaultModuleValidationAdvisor();
+	private static final ModuleValidationAdvisor defaults = new ModuleValidationAdvisor();
 
 	private static final long serialVersionUID = 1L;
 
 	private IModuleValidationAdvisor advisor;
 
 	public ModuleValidationAdvisor() {
-		this.advisor = defaults;
+		this.advisor = new DefaultModuleValidationAdvisor();
 	}
 
 	@DataBoundConstructor

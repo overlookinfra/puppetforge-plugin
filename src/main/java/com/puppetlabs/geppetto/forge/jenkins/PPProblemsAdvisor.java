@@ -116,7 +116,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			return doFillValidationPreferenceItems();
 		}
 
-		public IPotentialProblemsAdvisor getDefaults() {
+		public PPProblemsAdvisor getDefaults() {
 			return defaults;
 		}
 
@@ -132,8 +132,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			: pref.name();
 	}
 
-	private static final IPotentialProblemsAdvisor defaults = PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(
-		new DefaultPotentialProblemsAdvisor());
+	private static final PPProblemsAdvisor defaults = new PPProblemsAdvisor();
 
 	private static final long serialVersionUID = 1L;
 
@@ -178,26 +177,30 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	private final ValidationPreference validityAssertedAtRuntime;
 
 	public PPProblemsAdvisor() {
-		this.assignmentToVarNamedString = defaults.assignmentToVarNamedString();
-		this.assignmentToVarNamedTrusted = defaults.assignmentToVarNamedTrusted();
-		this.attributeIsNotString = defaults.attributeIsNotString();
-		this.booleansInStringForm = defaults.booleansInStringForm();
-		this.caseDefaultShouldAppearLast = defaults.caseDefaultShouldAppearLast();
-		this.dqStringNotRequired = defaults.dqStringNotRequired();
-		this.dqStringNotRequiredVariable = defaults.dqStringNotRequiredVariable();
-		this.ensureShouldAppearFirstInResource = defaults.ensureShouldAppearFirstInResource();
-		this.deprecatedImport = defaults.deprecatedImport();
-		this.deprecatedNodeInheritance = defaults.deprecatedNodeInheritance();
-		this.deprecatedPlusEquals = defaults.deprecatedPlusEquals();
-		this.deprecatedVariableName = defaults.deprecatedVariableName();
-		this.interpolatedNonBraceEnclosedHyphens = defaults.interpolatedNonBraceEnclosedHyphens();
-		this.missingDefaultInSelector = defaults.missingDefaultInSelector();
-		this.mlComments = defaults.mlComments();
-		this.rightToLeftRelationships = defaults.rightToLeftRelationships();
-		this.selectorDefaultShouldAppearLast = defaults.selectorDefaultShouldAppearLast();
-		this.unbracedInterpolation = defaults.unbracedInterpolation();
-		this.unquotedResourceTitles = defaults.unquotedResourceTitles();
-		this.validityAssertedAtRuntime = defaults.validityAssertedAtRuntime();
+		this(PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(new DefaultPotentialProblemsAdvisor()));
+	}
+
+	public PPProblemsAdvisor(IPotentialProblemsAdvisor ppa) {
+		this.assignmentToVarNamedString = ppa.assignmentToVarNamedString();
+		this.assignmentToVarNamedTrusted = ppa.assignmentToVarNamedTrusted();
+		this.attributeIsNotString = ppa.attributeIsNotString();
+		this.booleansInStringForm = ppa.booleansInStringForm();
+		this.caseDefaultShouldAppearLast = ppa.caseDefaultShouldAppearLast();
+		this.dqStringNotRequired = ppa.dqStringNotRequired();
+		this.dqStringNotRequiredVariable = ppa.dqStringNotRequiredVariable();
+		this.ensureShouldAppearFirstInResource = ppa.ensureShouldAppearFirstInResource();
+		this.deprecatedImport = ppa.deprecatedImport();
+		this.deprecatedNodeInheritance = ppa.deprecatedNodeInheritance();
+		this.deprecatedPlusEquals = ppa.deprecatedPlusEquals();
+		this.deprecatedVariableName = ppa.deprecatedVariableName();
+		this.interpolatedNonBraceEnclosedHyphens = ppa.interpolatedNonBraceEnclosedHyphens();
+		this.missingDefaultInSelector = ppa.missingDefaultInSelector();
+		this.mlComments = ppa.mlComments();
+		this.rightToLeftRelationships = ppa.rightToLeftRelationships();
+		this.selectorDefaultShouldAppearLast = ppa.selectorDefaultShouldAppearLast();
+		this.unbracedInterpolation = ppa.unbracedInterpolation();
+		this.unquotedResourceTitles = ppa.unquotedResourceTitles();
+		this.validityAssertedAtRuntime = ppa.validityAssertedAtRuntime();
 	}
 
 	@DataBoundConstructor

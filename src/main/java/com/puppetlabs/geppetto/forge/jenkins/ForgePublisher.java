@@ -25,7 +25,6 @@ import hudson.util.FormValidation;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.List;
 
 import javax.servlet.ServletException;
 
@@ -141,17 +140,10 @@ public class ForgePublisher extends Builder {
 		if(sourcePath != null)
 			moduleRoot = moduleRoot.child(sourcePath);
 
-		ValidationResult validationResult = null;
-		List<ValidationResult> validationResults = build.getActions(ValidationResult.class);
-		if(!validationResults.isEmpty()) {
-			if(validationResults.size() > 1)
-				info(listener, "Got multiple Puppet Validation Results. I'm using the first one.");
-
-			validationResult = validationResults.get(0);
+		for(ValidationResult validationResult : build.getActions(ValidationResult.class)) {
 			int severity = validationResult.getSeverity();
 			if(severity >= Diagnostic.ERROR) {
-				// This should normally never happen since the build result should have been worse
-				// than stable and trapped above.
+				// This should normally never happen since the build should have terminated
 				info(listener, "Validation of %s has errors so no pushing will occur.", moduleRoot.getName());
 				return true; // Error not caused here
 			}
