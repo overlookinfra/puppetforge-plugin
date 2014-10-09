@@ -316,13 +316,13 @@ public class ForgeValidator extends Builder {
 			if(!(diag instanceof ValidationDiagnostic)) {
 				switch(diag.getSeverity()) {
 					case Diagnostic.ERROR:
-						listener.error(diag.getMessage());
+						listener.error("%s", diag);
 						break;
 					case Diagnostic.FATAL:
-						listener.fatalError(diag.getMessage());
+						listener.fatalError("%s", diag);
 						break;
 					default:
-						listener.getLogger().println(diag);
+						listener.getLogger().format("%s%n", diag);
 				}
 				diagIter.remove();
 			}

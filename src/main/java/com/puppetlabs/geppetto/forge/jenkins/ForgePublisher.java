@@ -160,10 +160,10 @@ public class ForgePublisher extends Builder {
 		for(Diagnostic diag : publishingResult)
 			switch(diag.getSeverity()) {
 				case Diagnostic.ERROR:
-					listener.error(diag.getMessage());
+					listener.error("%s", diag);
 					break;
 				case Diagnostic.FATAL:
-					listener.fatalError(diag.getMessage());
+					listener.fatalError("%s", diag);
 			}
 
 		PublicationResult data = new PublicationResult(build, publishingResult);
