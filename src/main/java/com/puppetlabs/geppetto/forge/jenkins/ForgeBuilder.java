@@ -15,13 +15,33 @@ import hudson.util.FormValidation;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.StringTokenizer;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.puppetlabs.geppetto.common.Strings;
+import com.puppetlabs.geppetto.validation.ValidationOptions;
 
 abstract class ForgeBuilder {
+	static FormValidation checkFolderExlusionPatterns(String value) {
+		value = Strings.trimToNull(value);
+		if(value != null) {
+			int len = value.length();
+			for(int i = 0; i < len; ++i) {
+				char c = value.charAt(i);
+				if(c == '/' || c == '\\')
+					return FormValidation.error("Exclusion pattern must not contain ''{0}''", c);
+			}
+		}
+		return FormValidation.ok();
+	}
+
 	static FormValidation checkRelativePath(String value) {
 		value = Strings.trimToNull(value);
 		if(value != null) {
@@ -61,7 +81,32 @@ abstract class ForgeBuilder {
 		}
 	}
 
-	static final String FORGE_SERVICE_URL = "https://forgeapi.puppetlabs.com";
+	public static String joinFolderExclusionPatterns(Set<String> folderExclusionPatterns) {
+		int top = folderExclusionPatterns.size();
+		if(top == 0)
+			return "";
+		List<String> sorted = Lists.newArrayList(folderExclusionPatterns);
+		Collections.sort(sorted);
+		StringBuilder bld = new StringBuilder();
+		bld.append(sorted.get(0));
+		for(int idx = 1; idx < top; ++idx) {
+			bld.append('\n');
+			bld.append(sorted.get(idx));
+		}
+		return bld.toString();
+	}
 
-	public static final String ALREADY_PUBLISHED = "ALREADY_PUBLISHED";
+	static Set<String> parseFolderExclusionPatterns(String value) {
+		value = Strings.trimToNull(value);
+		if(value == null)
+			return ValidationOptions.DEFAULT_EXCLUTION_PATTERNS;
+
+		Set<String> patterns = Sets.newHashSet();
+		StringTokenizer st = new StringTokenizer(value, "\r\n");
+		while(st.hasMoreTokens())
+			patterns.add(st.nextToken());
+		return patterns;
+	}
+
+	static final String FORGE_SERVICE_URL = "https://forgeapi.puppetlabs.com";
 }

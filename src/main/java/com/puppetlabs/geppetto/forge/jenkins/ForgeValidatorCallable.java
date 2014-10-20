@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -77,6 +78,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private boolean checkReferences;
 
+	private boolean ignoreFileOverride;
+
 	private ValidationPreference puppetLintMaxSeverity;
 
 	private boolean puppetLintInverseOptions;
@@ -89,17 +92,21 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private ComplianceLevel complianceLevel;
 
+	private Set<String> folderExclusionPatterns;
+
 	public ForgeValidatorCallable() {
 	}
 
-	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, String branchName, ComplianceLevel complianceLevel,
-			boolean checkReferences, boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor,
-			IModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions,
-			String[] puppetLintOptions) {
+	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, boolean ignoreFileOverride,
+			Set<String> folderExclusionPatterns, String branchName, ComplianceLevel complianceLevel, boolean checkReferences,
+			boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
+			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions) {
 		super(forgeServiceURL, sourceURI, branchName);
+		this.folderExclusionPatterns = folderExclusionPatterns;
 		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
 		this.checkModuleSemantics = checkModuleSemantics;
+		this.ignoreFileOverride = ignoreFileOverride;
 		this.problemsAdvisor = problemsAdvisor;
 		this.moduleValidationAdvisor = moduleValidationAdvisor;
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity;
@@ -163,13 +170,13 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 		RubyHelper.setRubyServicesFactory(JRubyServices.FACTORY);
 		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations);
-		new PPDiagnosticsSetup(complianceLevel, options.getProblemsAdvisor()).createInjectorAndDoEMFRegistration();
+		new PPDiagnosticsSetup(options).createInjectorAndDoEMFRegistration();
 
 		BuildResult buildResult = getValidationService(geppettoDiag).validate(
 			geppettoDiag, options, getSourceDir(), new NullProgressMonitor());
 
 		byte[] svg = null;
-		if(checkModuleSemantics) {
+		if(checkModuleSemantics && geppettoDiag.getSeverity() < Diagnostic.ERROR) {
 			OpenBAStream dotStream = new OpenBAStream();
 			ICancel cancel = new ProgressMonitorCancelIndicator(new NullProgressMonitor(), 1);
 			getGraphProducer(geppettoDiag).produceGraph(
@@ -253,6 +260,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		else
 			options.setFileType(FileType.PUPPET_ROOT);
 
+		options.setComplianceLevel(complianceLevel);
 		options.setPlatformURI(PuppetTarget.forComplianceLevel(complianceLevel, false).getPlatformURI());
 		options.setEncodingProvider(new IEncodingProvider() {
 			@Override
@@ -264,6 +272,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		options.setSearchPath(getSearchPath(moduleLocations, importedModuleLocations));
 		options.setProblemsAdvisor(problemsAdvisor);
 		options.setModuleValidationAdvisor(moduleValidationAdvisor);
+		options.setFolderExclusionPatterns(folderExclusionPatterns);
+		options.setAllowFileOverride(!ignoreFileOverride);
 		return options;
 	}
 

@@ -27,8 +27,10 @@ import hudson.util.ListBoxModel;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 
@@ -37,6 +39,7 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+import com.google.common.collect.Lists;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
@@ -45,6 +48,7 @@ import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner;
+import com.puppetlabs.geppetto.validation.ValidationOptions;
 
 public class ForgeValidator extends Builder {
 
@@ -88,6 +92,10 @@ public class ForgeValidator extends Builder {
 		 */
 		public String getComplianceLevel() {
 			return PuppetTarget.getDefault().getComplianceLevel().name();
+		}
+
+		public String getDefaultFolderExclusionPatterns() {
+			return ForgeBuilder.joinFolderExclusionPatterns(ValidationOptions.DEFAULT_EXCLUTION_PATTERNS);
 		}
 
 		/**
@@ -186,6 +194,8 @@ public class ForgeValidator extends Builder {
 
 	private final boolean checkModuleSemantics;
 
+	private final boolean ignoreFileOverride;
+
 	private final boolean inverseOptions;
 
 	private final PPProblemsAdvisor problemsAdvisor;
@@ -200,14 +210,19 @@ public class ForgeValidator extends Builder {
 
 	private final String forgeServiceURL;
 
+	private final Set<String> folderExclusionPatterns;
+
 	@DataBoundConstructor
-	public ForgeValidator(String sourcePath, String forgeServiceURL, ComplianceLevel complianceLevel, Boolean checkReferences,
-			Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor, ModuleValidationAdvisor moduleValidationAdvisor,
-			ValidationPreference puppetLintMaxSeverity, String puppetLintOptions) throws FormValidation {
+	public ForgeValidator(String sourcePath, String forgeServiceURL, boolean ignoreFileOverride, String folderExclusionPatterns,
+			ComplianceLevel complianceLevel, Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
+			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, String puppetLintOptions)
+			throws FormValidation {
 		this.sourcePath = sourcePath;
 		this.forgeServiceURL = forgeServiceURL == null
 			? FORGE_SERVICE_URL
 			: forgeServiceURL;
+		this.ignoreFileOverride = ignoreFileOverride;
+		this.folderExclusionPatterns = ForgeBuilder.parseFolderExclusionPatterns(folderExclusionPatterns);
 		this.complianceLevel = complianceLevel == null
 			? PuppetTarget.getDefault().getComplianceLevel()
 			: complianceLevel;
@@ -229,6 +244,21 @@ public class ForgeValidator extends Builder {
 
 	public String getComplianceLevel() {
 		return complianceLevel.name();
+	}
+
+	public String getFolderExclusionPatterns() {
+		int top = folderExclusionPatterns.size();
+		if(top == 0)
+			return "";
+		List<String> sorted = Lists.newArrayList(folderExclusionPatterns);
+		Collections.sort(sorted);
+		StringBuilder bld = new StringBuilder();
+		bld.append(sorted.get(0));
+		for(int idx = 1; idx < top; ++idx) {
+			bld.append('\n');
+			bld.append(sorted.get(idx));
+		}
+		return bld.toString();
 	}
 
 	public String getForgeServiceURL() {
@@ -305,8 +335,9 @@ public class ForgeValidator extends Builder {
 			moduleRoot = moduleRoot.child(sourcePath);
 
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
-			forgeServiceURL, sourceURI, branch, complianceLevel, checkReferences, checkModuleSemantics, getProblemsAdvisor(),
-			getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, inverseOptions, puppetLintOptions));
+			forgeServiceURL, sourceURI, ignoreFileOverride, folderExclusionPatterns, branch, complianceLevel, checkReferences,
+			checkModuleSemantics, getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity,
+			inverseOptions, puppetLintOptions));
 
 		// Emit non-validation diagnostics to the console
 		boolean validationErrors = false;

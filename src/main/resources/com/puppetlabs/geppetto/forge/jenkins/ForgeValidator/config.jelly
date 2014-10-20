@@ -18,8 +18,16 @@
     <f:textbox default="${descriptor.sourcePath}"/>
   </f:entry>
 
+  <f:entry field="folderExclusionPatterns" title="${%Folder Exclusion Patterns}">
+    <f:textarea class="fixed-width" />
+  </f:entry>
+
   <f:entry field="forgeServiceURL" title="${%Forge Service URL}">
     <f:textbox default="${descriptor.forgeServiceURL}"/>
+  </f:entry>
+
+  <f:entry field="ignoreFileOverride" title="${%Ignore .geppetto-rc.json overrides}">
+     <f:checkbox default="false"/>
   </f:entry>
 
   <f:entry field="complianceLevel" title="${%Select Puppet Version}">
