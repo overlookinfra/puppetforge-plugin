@@ -80,10 +80,13 @@ public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
 
 		List<File> tarBalls = new ArrayList<File>();
 		Forge forge = getForge(result);
-		for(File moduleRoot : moduleRoots)
-			tarBalls.add(forge.build(moduleRoot, builtModules, null, null, null, result));
-
-		getForgeService(result).publishAll(tarBalls.toArray(new File[tarBalls.size()]), false, result);
+		for(File moduleRoot : moduleRoots) {
+			File tarBall = forge.build(moduleRoot, builtModules, null, null, null, result);
+			if(tarBall != null)
+				tarBalls.add(tarBall);
+		}
+		if(result.getSeverity() < Diagnostic.ERROR && !tarBalls.isEmpty())
+			getForgeService(result).publishAll(tarBalls.toArray(new File[tarBalls.size()]), false, result);
 		return result;
 	}
 }

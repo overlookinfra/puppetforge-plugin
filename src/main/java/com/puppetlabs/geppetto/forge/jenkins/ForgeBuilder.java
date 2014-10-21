@@ -30,14 +30,11 @@ import com.puppetlabs.geppetto.validation.ValidationOptions;
 
 abstract class ForgeBuilder {
 	static FormValidation checkFolderExlusionPatterns(String value) {
-		value = Strings.trimToNull(value);
-		if(value != null) {
-			int len = value.length();
-			for(int i = 0; i < len; ++i) {
-				char c = value.charAt(i);
-				if(c == '/' || c == '\\')
-					return FormValidation.error("Exclusion pattern must not contain ''{0}''", c);
-			}
+		try {
+			ValidationOptions.checkFolderExclusionPattern(value);
+		}
+		catch(IllegalArgumentException e) {
+			return FormValidation.error(e.getMessage());
 		}
 		return FormValidation.ok();
 	}
