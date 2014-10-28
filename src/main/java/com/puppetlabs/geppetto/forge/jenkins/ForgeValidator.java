@@ -11,6 +11,7 @@
 package com.puppetlabs.geppetto.forge.jenkins;
 
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_URL;
+import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkExcludeGlobs;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkRelativePath;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
 import hudson.Extension;
@@ -27,7 +28,6 @@ import hudson.util.ListBoxModel;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -39,7 +39,6 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import com.google.common.collect.Lists;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
@@ -56,6 +55,10 @@ public class ForgeValidator extends Builder {
 	public static final class ForgeValidatorDescriptor extends BuildStepDescriptor<Builder> {
 		public ForgeValidatorDescriptor() {
 			super(ForgeValidator.class);
+		}
+
+		public FormValidation doCheckExcludeGlobs(@QueryParameter String value) throws IOException, ServletException {
+			return checkExcludeGlobs(value);
 		}
 
 		public FormValidation doCheckForgeServiceURL(@QueryParameter String value) throws IOException, ServletException {
@@ -94,8 +97,8 @@ public class ForgeValidator extends Builder {
 			return PuppetTarget.getDefault().getComplianceLevel().name();
 		}
 
-		public String getDefaultFolderExclusionPatterns() {
-			return ForgeBuilder.joinFolderExclusionPatterns(ValidationOptions.DEFAULT_EXCLUTION_PATTERNS);
+		public String getDefaultExcludeGlobs() {
+			return ForgeBuilder.joinExcludeGlobs(ValidationOptions.DEFAULT_EXCLUDES);
 		}
 
 		/**
@@ -127,6 +130,8 @@ public class ForgeValidator extends Builder {
 			return true;
 		}
 	}
+
+	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
 
 	public static ListBoxModel doFillValidationPreferenceItems() {
 		List<hudson.util.ListBoxModel.Option> items = new ArrayList<hudson.util.ListBoxModel.Option>();
@@ -186,8 +191,6 @@ public class ForgeValidator extends Builder {
 		return check;
 	}
 
-	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
-
 	private final ComplianceLevel complianceLevel;
 
 	private final boolean checkReferences;
@@ -210,10 +213,10 @@ public class ForgeValidator extends Builder {
 
 	private final String forgeServiceURL;
 
-	private final Set<String> folderExclusionPatterns;
+	private final Set<String> excludeGlobs;
 
 	@DataBoundConstructor
-	public ForgeValidator(String sourcePath, String forgeServiceURL, boolean ignoreFileOverride, String folderExclusionPatterns,
+	public ForgeValidator(String sourcePath, String forgeServiceURL, boolean ignoreFileOverride, String excludes,
 			ComplianceLevel complianceLevel, Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
 			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, String puppetLintOptions)
 			throws FormValidation {
@@ -222,7 +225,7 @@ public class ForgeValidator extends Builder {
 			? FORGE_SERVICE_URL
 			: forgeServiceURL;
 		this.ignoreFileOverride = ignoreFileOverride;
-		this.folderExclusionPatterns = ForgeBuilder.parseFolderExclusionPatterns(folderExclusionPatterns);
+		this.excludeGlobs = ForgeBuilder.parseExcludeGlobs(excludes);
 		this.complianceLevel = complianceLevel == null
 			? PuppetTarget.getDefault().getComplianceLevel()
 			: complianceLevel;
@@ -246,19 +249,8 @@ public class ForgeValidator extends Builder {
 		return complianceLevel.name();
 	}
 
-	public String getFolderExclusionPatterns() {
-		int top = folderExclusionPatterns.size();
-		if(top == 0)
-			return "";
-		List<String> sorted = Lists.newArrayList(folderExclusionPatterns);
-		Collections.sort(sorted);
-		StringBuilder bld = new StringBuilder();
-		bld.append(sorted.get(0));
-		for(int idx = 1; idx < top; ++idx) {
-			bld.append('\n');
-			bld.append(sorted.get(idx));
-		}
-		return bld.toString();
+	public String getExcludeGlobs() {
+		return ForgeBuilder.joinExcludeGlobs(excludeGlobs);
 	}
 
 	public String getForgeServiceURL() {
@@ -307,6 +299,10 @@ public class ForgeValidator extends Builder {
 		return checkReferences;
 	}
 
+	public boolean isIgnoreFileOverride() {
+		return ignoreFileOverride;
+	}
+
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
 
@@ -335,9 +331,9 @@ public class ForgeValidator extends Builder {
 			moduleRoot = moduleRoot.child(sourcePath);
 
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
-			forgeServiceURL, sourceURI, ignoreFileOverride, folderExclusionPatterns, branch, complianceLevel, checkReferences,
-			checkModuleSemantics, getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity,
-			inverseOptions, puppetLintOptions));
+			forgeServiceURL, sourceURI, ignoreFileOverride, excludeGlobs, branch, complianceLevel, checkReferences, checkModuleSemantics,
+			getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, inverseOptions,
+			puppetLintOptions));
 
 		// Emit non-validation diagnostics to the console
 		boolean validationErrors = false;

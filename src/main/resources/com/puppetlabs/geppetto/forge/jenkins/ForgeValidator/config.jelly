@@ -18,8 +18,8 @@
     <f:textbox default="${descriptor.sourcePath}"/>
   </f:entry>
 
-  <f:entry field="folderExclusionPatterns" title="${%Folder Exclusion Patterns}">
-    <f:textarea class="fixed-width" />
+  <f:entry field="excludeGlobs" title="${%Exclude Globs}">
+    <f:textarea class="fixed-width" default="${descriptor.defaultExcludeGlobs}" />
   </f:entry>
 
   <f:entry field="forgeServiceURL" title="${%Forge Service URL}">

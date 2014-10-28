@@ -17,6 +17,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -70,9 +72,9 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private static final Pattern GITHUB_REPO_URL_PATTERN = Pattern.compile("github.com[/:]([^/\\s]+)/([^/\\s]+)\\.git$");
 
-	private transient String sourceHrefPrefix;
-
 	static final String IMPORTED_MODULES_ROOT = "importedModules";
+
+	private transient String sourceHrefPrefix;
 
 	private boolean checkModuleSemantics;
 
@@ -92,17 +94,17 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private ComplianceLevel complianceLevel;
 
-	private Set<String> folderExclusionPatterns;
+	private Set<String> excludes;
 
 	public ForgeValidatorCallable() {
 	}
 
-	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, boolean ignoreFileOverride,
-			Set<String> folderExclusionPatterns, String branchName, ComplianceLevel complianceLevel, boolean checkReferences,
-			boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
+	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, boolean ignoreFileOverride, Set<String> excludes,
+			String branchName, ComplianceLevel complianceLevel, boolean checkReferences, boolean checkModuleSemantics,
+			IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
 			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions) {
 		super(forgeServiceURL, sourceURI, branchName);
-		this.folderExclusionPatterns = folderExclusionPatterns;
+		this.excludes = excludes;
 		this.complianceLevel = complianceLevel;
 		this.checkReferences = checkReferences;
 		this.checkModuleSemantics = checkModuleSemantics;
@@ -139,13 +141,15 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			fd.getSeverity(), fd.getType(), fd.getMessage(), getSourceHrefPrefix(), getRelativePath(fd.getFile()), fd.getLineNumber());
 	}
 
-	private Diagnostic convertPuppetLintDiagnostic(File moduleRoot, Issue issue) {
+	private Diagnostic convertPuppetLintDiagnostic(File moduleRoot, PathMatcher matcher, Issue issue) {
+		if(matcher.matches(Paths.get(".", issue.getPath())))
+			return null;
 		return new ValidationDiagnostic(
 			getSeverity(issue), PuppetLintService.PUPPET_LINT, issue.getMessage(), getSourceHrefPrefix(), getRelativePath(new File(
 				moduleRoot, issue.getPath())), issue.getLineNumber());
 	}
 
-	private void geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result) throws IOException {
+	private ValidationOptions geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result) throws IOException {
 
 		Diagnostic geppettoDiag = new Diagnostic();
 		Collection<File> importedModuleLocations = null;
@@ -158,7 +162,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 		if(geppettoDiag.getSeverity() == Diagnostic.ERROR) {
 			addGeppettoResult(geppettoDiag, null, result);
-			return;
+			return null;
 		}
 
 		if(checkModuleSemantics) {
@@ -169,7 +173,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			importedModuleLocations = Collections.emptyList();
 
 		RubyHelper.setRubyServicesFactory(JRubyServices.FACTORY);
-		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations);
+		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations, geppettoDiag);
 		new PPDiagnosticsSetup(options).createInjectorAndDoEMFRegistration();
 
 		BuildResult buildResult = getValidationService(geppettoDiag).validate(
@@ -184,6 +188,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			svg = produceSVG(dotStream.getInputStream(), geppettoDiag);
 		}
 		addGeppettoResult(geppettoDiag, svg, result);
+		return options;
 	}
 
 	public DependencyGraphProducer getGraphProducer(Diagnostic diag) {
@@ -249,11 +254,13 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		return getInjector(diag).getInstance(SVGProducer.class);
 	}
 
-	private ValidationOptions getValidationOptions(Collection<File> moduleLocations, Collection<File> importedModuleLocations) {
+	private ValidationOptions getValidationOptions(Collection<File> moduleLocations, Collection<File> importedModuleLocations,
+			Diagnostic diag) {
 		ValidationOptions options = new ValidationOptions();
 		options.setCheckLayout(true);
 		options.setCheckModuleSemantics(checkModuleSemantics);
 		options.setCheckReferences(checkReferences);
+		options.setValidationRoot(getSourceDir());
 
 		if(moduleLocations.size() == 1 && getSourceDir().equals(moduleLocations.iterator().next()))
 			options.setFileType(FileType.MODULE_ROOT);
@@ -272,8 +279,10 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		options.setSearchPath(getSearchPath(moduleLocations, importedModuleLocations));
 		options.setProblemsAdvisor(problemsAdvisor);
 		options.setModuleValidationAdvisor(moduleValidationAdvisor);
-		options.setFolderExclusionPatterns(folderExclusionPatterns);
+		options.setExcludeGlobs(excludes);
 		options.setAllowFileOverride(!ignoreFileOverride);
+		if(options.isAllowFileOverride())
+			options = options.mergeFileOverride(diag);
 		return options;
 	}
 
@@ -291,18 +300,19 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			return result;
 		}
 
-		geppettoValidation(moduleRoots, result);
-		if(puppetLintMaxSeverity != ValidationPreference.IGNORE)
-			lintValidation(moduleRoots, result);
+		ValidationOptions options = geppettoValidation(moduleRoots, result);
+		if(options != null && puppetLintMaxSeverity != ValidationPreference.IGNORE)
+			lintValidation(moduleRoots, options, result);
 		return result;
 	}
 
-	private void lintValidation(Collection<File> moduleLocations, Diagnostic result) {
+	private void lintValidation(Collection<File> moduleLocations, ValidationOptions options, Diagnostic result) {
 		PuppetLintRunner runner = PuppetLintService.getInstance().getPuppetLintRunner();
 		try {
+			PathMatcher matcher = FileUtils.createGlobMatcher(options.getExcludeGlobs());
 			for(File moduleRoot : moduleLocations) {
 				for(PuppetLintRunner.Issue issue : runner.run(moduleRoot, puppetLintInverseOptions, puppetLintOptions)) {
-					Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, issue);
+					Diagnostic diag = convertPuppetLintDiagnostic(moduleRoot, matcher, issue);
 					if(diag != null)
 						result.addChild(diag);
 				}

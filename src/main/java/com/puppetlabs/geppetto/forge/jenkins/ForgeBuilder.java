@@ -26,15 +26,19 @@ import org.eclipse.core.runtime.Path;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.puppetlabs.geppetto.common.Strings;
-import com.puppetlabs.geppetto.validation.ValidationOptions;
 
 abstract class ForgeBuilder {
-	static FormValidation checkFolderExlusionPatterns(String value) {
-		try {
-			ValidationOptions.checkFolderExclusionPattern(value);
-		}
-		catch(IllegalArgumentException e) {
-			return FormValidation.error(e.getMessage());
+	static final String FORGE_SERVICE_URL = "https://forgeapi.puppetlabs.com";
+
+	private static final char[] ILLEGAL_GLOB_CHARS = new char[] { ',', '{', '}' };
+
+	static FormValidation checkExcludeGlobs(String value) {
+		StringTokenizer st = new StringTokenizer(value, "\r\n");
+		while(st.hasMoreTokens()) {
+			String glob = st.nextToken();
+			for(char c : ILLEGAL_GLOB_CHARS)
+				if(glob.indexOf(c) >= 0)
+					return FormValidation.error("Glob cannot contain '%c'", c);
 		}
 		return FormValidation.ok();
 	}
@@ -78,11 +82,13 @@ abstract class ForgeBuilder {
 		}
 	}
 
-	public static String joinFolderExclusionPatterns(Set<String> folderExclusionPatterns) {
-		int top = folderExclusionPatterns.size();
+	public static String joinExcludeGlobs(Set<String> excludes) {
+		if(excludes == null)
+			return null;
+		int top = excludes.size();
 		if(top == 0)
 			return "";
-		List<String> sorted = Lists.newArrayList(folderExclusionPatterns);
+		List<String> sorted = Lists.newArrayList(excludes);
 		Collections.sort(sorted);
 		StringBuilder bld = new StringBuilder();
 		bld.append(sorted.get(0));
@@ -93,10 +99,10 @@ abstract class ForgeBuilder {
 		return bld.toString();
 	}
 
-	static Set<String> parseFolderExclusionPatterns(String value) {
+	static Set<String> parseExcludeGlobs(String value) {
 		value = Strings.trimToNull(value);
 		if(value == null)
-			return ValidationOptions.DEFAULT_EXCLUTION_PATTERNS;
+			return Collections.emptySet();
 
 		Set<String> patterns = Sets.newHashSet();
 		StringTokenizer st = new StringTokenizer(value, "\r\n");
@@ -104,6 +110,4 @@ abstract class ForgeBuilder {
 			patterns.add(st.nextToken());
 		return patterns;
 	}
-
-	static final String FORGE_SERVICE_URL = "https://forgeapi.puppetlabs.com";
 }
