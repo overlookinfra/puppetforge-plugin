@@ -13,6 +13,9 @@
   <f:entry field="missingForgeRequiredFields" title="${%Missing fields required by Puppet Forge}">
     <f:select default="${descriptor.defaults.missingForgeRequiredFields}"/>
   </f:entry>
+  <f:entry field="moduleClassNotInInitPP" title="${%Module class not defined in manifests/init.pp}">
+    <f:select default="${descriptor.defaults.moduleClassNotInInitPP}"/>
+  </f:entry>
   <f:entry field="moduleNameNotStrict" title="${%Module Name not Strictly Correct}">
     <f:select default="${descriptor.defaults.moduleNameNotStrict}"/>
   </f:entry>

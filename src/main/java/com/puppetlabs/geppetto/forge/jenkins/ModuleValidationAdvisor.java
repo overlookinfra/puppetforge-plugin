@@ -52,6 +52,10 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 			return doFillValidationPreferenceItems();
 		}
 
+		public ListBoxModel doFillModuleClassNotInInitPPItems() {
+			return doFillValidationPreferenceItems();
+		}
+
 		public ListBoxModel doFillModulefileExistsAndIsUsedItems() {
 			return doFillValidationPreferenceItems();
 		}
@@ -106,14 +110,15 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 
 	@DataBoundConstructor
 	public ModuleValidationAdvisor(ValidationPreference circularDependency, ValidationPreference dependencyVersionMismatch,
-			ValidationPreference deprecatedKey, ValidationPreference missingForgeRequiredFields, ValidationPreference moduleNameNotStrict,
-			ValidationPreference moduleRedefinition, ValidationPreference modulefileExists, ValidationPreference modulefileExistsAndIsUsed,
+			ValidationPreference deprecatedKey, ValidationPreference missingForgeRequiredFields,
+			ValidationPreference moduleClassNotInInitPP, ValidationPreference moduleNameNotStrict, ValidationPreference moduleRedefinition,
+			ValidationPreference modulefileExists, ValidationPreference modulefileExistsAndIsUsed,
 			ValidationPreference unexpectedSubmodule, ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
 			ValidationPreference whitespaceInTag) {
 		this.advisor = new ModuleValidationAdvisorBean(
-			circularDependency, dependencyVersionMismatch, deprecatedKey, missingForgeRequiredFields, moduleNameNotStrict,
-			moduleRedefinition, modulefileExists, modulefileExistsAndIsUsed, unexpectedSubmodule, unrecognizedKey, unresolvedReference,
-			whitespaceInTag);
+			circularDependency, dependencyVersionMismatch, deprecatedKey, missingForgeRequiredFields, moduleClassNotInInitPP,
+			moduleNameNotStrict, moduleRedefinition, modulefileExists, modulefileExistsAndIsUsed, unexpectedSubmodule, unrecognizedKey,
+			unresolvedReference, whitespaceInTag);
 	}
 
 	public IModuleValidationAdvisor getAdvisor() {
@@ -146,6 +151,13 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 	 */
 	public String getMissingForgeRequiredFields() {
 		return advisor.getMissingForgeRequiredFields().name();
+	}
+
+	/**
+	 * @return the moduleClassNotInInitPP
+	 */
+	public String getModuleClassNotInInitPP() {
+		return advisor.getModuleClassNotInInitPP().name();
 	}
 
 	/**
