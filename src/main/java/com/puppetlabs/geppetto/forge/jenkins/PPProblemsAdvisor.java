@@ -133,7 +133,7 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	private final IPotentialProblemsAdvisor advisor;
 
 	public PPProblemsAdvisor() {
-		advisor = PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(new DefaultPotentialProblemsAdvisor());
+		advisor = PuppetTarget.getDefault().getComplianceLevel().createValidationAdvisor(DefaultPotentialProblemsAdvisor.INSTANCE);
 	}
 
 	@DataBoundConstructor

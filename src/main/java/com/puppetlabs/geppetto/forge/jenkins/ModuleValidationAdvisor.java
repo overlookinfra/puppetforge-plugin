@@ -102,10 +102,10 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 
 	private static final long serialVersionUID = 1L;
 
-	private IModuleValidationAdvisor advisor;
+	private final IModuleValidationAdvisor advisor;
 
 	public ModuleValidationAdvisor() {
-		this.advisor = new DefaultModuleValidationAdvisor();
+		this.advisor = DefaultModuleValidationAdvisor.INSTANCE;
 	}
 
 	@DataBoundConstructor
