@@ -18,6 +18,10 @@
     <f:textbox default="${descriptor.sourcePath}"/>
   </f:entry>
 
+  <f:entry field="jsonResultPath" title="${%Relative path to JSON result}">
+    <f:textbox default="${descriptor.jsonResultPath}"/>
+  </f:entry>
+
   <f:entry field="excludeGlobs" title="${%Exclude Globs}">
     <f:textarea class="fixed-width" default="${descriptor.defaultExcludeGlobs}" />
   </f:entry>
@@ -30,7 +34,11 @@
      <f:checkbox default="false"/>
   </f:entry>
 
-  <f:entry field="complianceLevel" title="${%Select Puppet Version}">
+  <f:entry field="complianceLevel" title="${%Min Puppet Version}">
+    <f:select default="${descriptor.complianceLevel}"/>
+  </f:entry>
+
+  <f:entry field="maxComplianceLevel" title="${%Max Puppet Version}">
     <f:select default="${descriptor.complianceLevel}"/>
   </f:entry>
 

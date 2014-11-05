@@ -26,10 +26,14 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletException;
@@ -39,6 +43,9 @@ import jenkins.model.Jenkins;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.collect.Maps;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
@@ -65,6 +72,10 @@ public class ForgeValidator extends Builder {
 			return checkURL(value);
 		}
 
+		public FormValidation doCheckJsonResultPath(@QueryParameter String value) throws IOException, ServletException {
+			return checkRelativePath(value);
+		}
+
 		public FormValidation doCheckPuppetLintOptions(@QueryParameter String value) throws IOException, ServletException {
 			try {
 				parsePuppetLintOptions(value, new boolean[1]);
@@ -84,6 +95,10 @@ public class ForgeValidator extends Builder {
 			for(ComplianceLevel level : ComplianceLevel.values())
 				items.add(level.toString(), level.name());
 			return items;
+		}
+
+		public ListBoxModel doFillMaxComplianceLevelItems() {
+			return doFillComplianceLevelItems();
 		}
 
 		public ListBoxModel doFillPuppetLintMaxSeverityItems() {
@@ -193,6 +208,8 @@ public class ForgeValidator extends Builder {
 
 	private final ComplianceLevel complianceLevel;
 
+	private final ComplianceLevel maxComplianceLevel;
+
 	private final boolean checkReferences;
 
 	private final boolean checkModuleSemantics;
@@ -211,24 +228,26 @@ public class ForgeValidator extends Builder {
 
 	private final String sourcePath;
 
+	private final String jsonResultPath;
+
 	private final String forgeServiceURL;
 
 	private final Set<String> excludeGlobs;
 
 	@DataBoundConstructor
-	public ForgeValidator(String sourcePath, String forgeServiceURL, boolean ignoreFileOverride, String excludes,
-			ComplianceLevel complianceLevel, Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
-			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, String puppetLintOptions)
-			throws FormValidation {
+	public ForgeValidator(String sourcePath, String jsonResultPath, String forgeServiceURL, boolean ignoreFileOverride, String excludes,
+			ComplianceLevel complianceLevel, ComplianceLevel maxComplianceLevel, Boolean checkReferences, Boolean checkModuleSemantics,
+			PPProblemsAdvisor problemsAdvisor, ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity,
+			String puppetLintOptions) throws FormValidation {
 		this.sourcePath = sourcePath;
+		this.jsonResultPath = jsonResultPath;
 		this.forgeServiceURL = forgeServiceURL == null
 			? FORGE_SERVICE_URL
 			: forgeServiceURL;
 		this.ignoreFileOverride = ignoreFileOverride;
 		this.excludeGlobs = ForgeBuilder.parseExcludeGlobs(excludes);
-		this.complianceLevel = complianceLevel == null
-			? PuppetTarget.getDefault().getComplianceLevel()
-			: complianceLevel;
+		this.complianceLevel = complianceLevel;
+		this.maxComplianceLevel = maxComplianceLevel;
 		this.checkReferences = checkReferences == null
 			? false
 			: checkReferences.booleanValue();
@@ -245,8 +264,20 @@ public class ForgeValidator extends Builder {
 		inverseOptions = inverse[0];
 	}
 
+	private ComplianceLevel _maxComplianceLevel() {
+		return maxComplianceLevel == null
+			? _minComplianceLevel()
+			: maxComplianceLevel;
+	}
+
+	private ComplianceLevel _minComplianceLevel() {
+		return complianceLevel == null
+			? PuppetTarget.getDefault().getComplianceLevel()
+			: complianceLevel;
+	}
+
 	public String getComplianceLevel() {
-		return complianceLevel.name();
+		return _minComplianceLevel().name();
 	}
 
 	public String getExcludeGlobs() {
@@ -255,6 +286,14 @@ public class ForgeValidator extends Builder {
 
 	public String getForgeServiceURL() {
 		return forgeServiceURL;
+	}
+
+	public String getJsonResultPath() {
+		return jsonResultPath;
+	}
+
+	public String getMaxComplianceLevel() {
+		return _maxComplianceLevel().name();
 	}
 
 	public ModuleValidationAdvisor getModuleValidationAdvisor() {
@@ -330,8 +369,16 @@ public class ForgeValidator extends Builder {
 		if(sourcePath != null)
 			moduleRoot = moduleRoot.child(sourcePath);
 
+		ComplianceLevel min = _minComplianceLevel();
+		ComplianceLevel max = _maxComplianceLevel();
+		if(max.ordinal() < min.ordinal()) {
+			ComplianceLevel x = min;
+			min = max;
+			max = x;
+		}
+
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
-			forgeServiceURL, sourceURI, ignoreFileOverride, excludeGlobs, branch, complianceLevel, checkReferences, checkModuleSemantics,
+			forgeServiceURL, sourceURI, ignoreFileOverride, excludeGlobs, branch, min, max, checkReferences, checkModuleSemantics,
 			getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, inverseOptions,
 			puppetLintOptions));
 
@@ -340,7 +387,7 @@ public class ForgeValidator extends Builder {
 		Iterator<Diagnostic> diagIter = result.iterator();
 		while(diagIter.hasNext()) {
 			Diagnostic diag = diagIter.next();
-			if(!(diag instanceof ValidationDiagnostic)) {
+			if(!(diag instanceof ValidationDiagnostic || diag instanceof MultiComplianceDiagnostic)) {
 				switch(diag.getSeverity()) {
 					case Diagnostic.ERROR:
 						listener.error("%s", diag);
@@ -363,6 +410,25 @@ public class ForgeValidator extends Builder {
 		ValidationResult data = new ValidationResult(build);
 		build.addAction(data);
 		data.setResult(result);
+		if(jsonResultPath != null) {
+			try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jsonResultPath).write())) {
+				ForgeResult forgeResult = new ForgeResult();
+				forgeResult.setName("Geppetto");
+				forgeResult.setVersion("4.3.0");
+				Map<String, Map<String, Object>> resultMap = new HashMap<>();
+				for(Diagnostic diag : data.getUnfilteredLevelDiagnostics()) {
+					ComplianceDiagnostic cdiag = (ComplianceDiagnostic) diag;
+					Map<String, Object> cdiagMap = Maps.newHashMap();
+					cdiagMap.put("severity", cdiag.getSeverityString());
+					cdiagMap.put("diagnostics", cdiag.getChildren());
+					resultMap.put(cdiag.getComplianceLevel().toString(), cdiagMap);
+				}
+				forgeResult.setResults(resultMap);
+				ObjectMapper mapper = new ObjectMapper();
+				mapper.enable(SerializationFeature.INDENT_OUTPUT);
+				mapper.writeValue(out, forgeResult);
+			}
+		}
 		return result.getSeverity() < Diagnostic.ERROR;
 	}
 }

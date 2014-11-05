@@ -47,7 +47,6 @@ import com.puppetlabs.geppetto.graph.RelativeFileHrefProducer;
 import com.puppetlabs.geppetto.graph.SVGProducer;
 import com.puppetlabs.geppetto.graph.dependency.DependencyGraphModule;
 import com.puppetlabs.geppetto.module.dsl.validation.IModuleValidationAdvisor;
-import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
@@ -66,7 +65,7 @@ import com.puppetlabs.geppetto.validation.runner.PPDiagnosticsSetup;
 import com.puppetlabs.graph.ICancel;
 
 public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagnostic<byte[]>> {
-	private static final long serialVersionUID = -5597025638204256583L;
+	private static final long serialVersionUID = 1L;
 
 	private static final Charset UTF_8 = Charset.forName("UTF-8");
 
@@ -92,7 +91,9 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private IModuleValidationAdvisor moduleValidationAdvisor;
 
-	private ComplianceLevel complianceLevel;
+	private ComplianceLevel minComplianceLevel;
+
+	private ComplianceLevel maxComplianceLevel;
 
 	private Set<String> excludes;
 
@@ -100,12 +101,13 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	}
 
 	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, boolean ignoreFileOverride, Set<String> excludes,
-			String branchName, ComplianceLevel complianceLevel, boolean checkReferences, boolean checkModuleSemantics,
-			IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
+			String branchName, ComplianceLevel minComplianceLevel, ComplianceLevel maxComplianceLevel, boolean checkReferences,
+			boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
 			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions) {
 		super(forgeServiceURL, sourceURI, branchName);
 		this.excludes = excludes;
-		this.complianceLevel = complianceLevel;
+		this.minComplianceLevel = minComplianceLevel;
+		this.maxComplianceLevel = maxComplianceLevel;
 		this.checkReferences = checkReferences;
 		this.checkModuleSemantics = checkModuleSemantics;
 		this.ignoreFileOverride = ignoreFileOverride;
@@ -118,11 +120,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private void addGeppettoResult(Diagnostic geppettoDiag, byte[] svg, ResultWithDiagnostic<byte[]> result) {
 		result.setResult(svg);
-		for(Diagnostic child : geppettoDiag)
-			if(child instanceof FileDiagnostic)
-				result.addChild(convertFileDiagnostic((FileDiagnostic) child));
-			else
-				result.addChild(child);
+		convertChildren(geppettoDiag);
+		result.addChildren(geppettoDiag.getChildren());
 	}
 
 	@Override
@@ -136,9 +135,20 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		modules.add(new DependencyGraphModule(hrefProducerClass, repoHrefPrefix));
 	}
 
+	private void convertChildren(Diagnostic diag) {
+		List<Diagnostic> children = diag.getChildren();
+		int idx = children.size();
+		while(--idx >= 0) {
+			Diagnostic child = children.get(idx);
+			if(child instanceof FileDiagnostic)
+				children.set(idx, convertFileDiagnostic((FileDiagnostic) child));
+			else
+				convertChildren(child);
+		}
+	}
+
 	private Diagnostic convertFileDiagnostic(FileDiagnostic fd) {
-		return new ValidationDiagnostic(
-			fd.getSeverity(), fd.getType(), fd.getMessage(), getSourceHrefPrefix(), getRelativePath(fd.getFile()), fd.getLineNumber());
+		return new ValidationDiagnostic(fd, getSourceHrefPrefix(), getRelativePath(fd.getFile()));
 	}
 
 	private Diagnostic convertPuppetLintDiagnostic(File moduleRoot, PathMatcher matcher, Issue issue) {
@@ -172,23 +182,86 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		if(importedModuleLocations == null)
 			importedModuleLocations = Collections.emptyList();
 
-		RubyHelper.setRubyServicesFactory(JRubyServices.FACTORY);
-		ValidationOptions options = getValidationOptions(moduleLocations, importedModuleLocations, geppettoDiag);
-		new PPDiagnosticsSetup(options).createInjectorAndDoEMFRegistration();
+		ValidationOptions bestOptions = null;
+		ComplianceDiagnostic bestDiag = null;
+		BuildResult bestResult = null;
 
-		BuildResult buildResult = getValidationService(geppettoDiag).validate(
-			geppettoDiag, options, getSourceDir(), new NullProgressMonitor());
+		RubyHelper.setRubyServicesFactory(JRubyServices.FACTORY);
+
+		Diagnostic levelDiags = new Diagnostic();
+		for(ComplianceLevel level : ComplianceLevel.values()) {
+			if(level.ordinal() < minComplianceLevel.ordinal())
+				continue;
+			if(level.ordinal() > maxComplianceLevel.ordinal())
+				break;
+
+			ComplianceDiagnostic levelDiag = new ComplianceDiagnostic(level);
+			levelDiag.setMessage(level.toString());
+			ValidationOptions options = getValidationOptions(level, moduleLocations, importedModuleLocations, levelDiag);
+			new PPDiagnosticsSetup(options).createInjectorAndDoEMFRegistration();
+			BuildResult buildResult = getValidationService(levelDiag).validate(
+				levelDiag, options, getSourceDir(), new NullProgressMonitor());
+
+			if(levelDiags.getChildren().isEmpty() || levelDiag.getSeverity() < levelDiags.getSeverity()) {
+				bestDiag = levelDiag;
+				bestOptions = options;
+				bestResult = buildResult;
+			}
+			else {
+				int maxErrors = 0;
+				int maxWarnings = 0;
+				for(Diagnostic ld : levelDiags) {
+					int errors = 0;
+					int warnings = 0;
+					for(Diagnostic d : ld) {
+						switch(d.getSeverity()) {
+							case Diagnostic.ERROR:
+								++errors;
+								break;
+							case Diagnostic.WARNING:
+								++warnings;
+						}
+					}
+					if(errors > maxErrors)
+						maxErrors = errors;
+					if(warnings > maxWarnings)
+						maxWarnings = warnings;
+				}
+				int errors = 0;
+				int warnings = 0;
+				for(Diagnostic d : levelDiag) {
+					switch(d.getSeverity()) {
+						case Diagnostic.ERROR:
+							++errors;
+							break;
+						case Diagnostic.WARNING:
+							++warnings;
+					}
+				}
+				if(errors < maxErrors || errors == maxErrors && warnings <= maxWarnings) {
+					bestDiag = levelDiag;
+					bestOptions = options;
+					bestResult = buildResult;
+				}
+			}
+			levelDiags.addChild(levelDiag);
+		}
+		MultiComplianceDiagnostic mcDiags = new MultiComplianceDiagnostic(bestDiag.getComplianceLevel());
+		mcDiags.addChildren(levelDiags.getChildren());
+
+		geppettoDiag.addChildren(bestDiag.getChildren());
+		geppettoDiag.addChild(mcDiags);
 
 		byte[] svg = null;
 		if(checkModuleSemantics && geppettoDiag.getSeverity() < Diagnostic.ERROR) {
 			OpenBAStream dotStream = new OpenBAStream();
 			ICancel cancel = new ProgressMonitorCancelIndicator(new NullProgressMonitor(), 1);
 			getGraphProducer(geppettoDiag).produceGraph(
-				cancel, "", moduleLocations.toArray(new File[moduleLocations.size()]), dotStream, buildResult, result);
+				cancel, "", moduleLocations.toArray(new File[moduleLocations.size()]), dotStream, bestResult, result);
 			svg = produceSVG(dotStream.getInputStream(), geppettoDiag);
 		}
 		addGeppettoResult(geppettoDiag, svg, result);
-		return options;
+		return bestOptions;
 	}
 
 	public DependencyGraphProducer getGraphProducer(Diagnostic diag) {
@@ -254,8 +327,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		return getInjector(diag).getInstance(SVGProducer.class);
 	}
 
-	private ValidationOptions getValidationOptions(Collection<File> moduleLocations, Collection<File> importedModuleLocations,
-			Diagnostic diag) {
+	private ValidationOptions getValidationOptions(ComplianceLevel complianceLevel, Collection<File> moduleLocations,
+			Collection<File> importedModuleLocations, Diagnostic diag) {
 		ValidationOptions options = new ValidationOptions();
 		options.setCheckLayout(true);
 		options.setCheckModuleSemantics(checkModuleSemantics);
@@ -268,7 +341,6 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			options.setFileType(FileType.PUPPET_ROOT);
 
 		options.setComplianceLevel(complianceLevel);
-		options.setPlatformURI(PuppetTarget.forComplianceLevel(complianceLevel, false).getPlatformURI());
 		options.setEncodingProvider(new IEncodingProvider() {
 			@Override
 			public String getEncoding(URI file) {
@@ -296,7 +368,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		FileUtils.rmR(getBuildDir());
 		Collection<File> moduleRoots = findModuleRoots(result);
 		if(moduleRoots.isEmpty()) {
-			result.addChild(new Diagnostic(Diagnostic.ERROR, ValidationService.GEPPETTO, "No modules found in repository"));
+			result.addChild(new Diagnostic(Diagnostic.ERROR, ValidationService.MODULE, "No modules found in repository"));
 			return result;
 		}
 

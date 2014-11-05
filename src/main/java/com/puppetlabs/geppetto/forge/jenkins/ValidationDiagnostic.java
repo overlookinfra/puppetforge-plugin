@@ -10,9 +10,12 @@
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
+import com.puppetlabs.geppetto.diagnostic.FileDiagnostic;
 
+@JsonIgnoreProperties({ "children", "exception", "file", "hrefPrefix", "issueData", "lineNumber", "source" })
 public class ValidationDiagnostic extends Diagnostic {
 	private static final long serialVersionUID = -7859501517526959341L;
 
@@ -21,6 +24,13 @@ public class ValidationDiagnostic extends Diagnostic {
 	private final String path;
 
 	private final int line;
+
+	public ValidationDiagnostic(FileDiagnostic fd, String hrefPrefix, String path) {
+		super(fd);
+		this.hrefPrefix = hrefPrefix;
+		this.path = path;
+		this.line = fd.getLineNumber();
+	}
 
 	public ValidationDiagnostic(int severity, DiagnosticType type, String message, String hrefPrefix, String path, int line) {
 		super(severity, type, message);
