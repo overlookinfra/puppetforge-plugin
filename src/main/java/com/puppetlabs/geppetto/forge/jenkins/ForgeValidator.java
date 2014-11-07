@@ -14,6 +14,7 @@ import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.FORGE_SERVICE_U
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkExcludeGlobs;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkRelativePath;
 import static com.puppetlabs.geppetto.forge.jenkins.ForgeBuilder.checkURL;
+import static java.lang.String.format;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -28,12 +29,14 @@ import hudson.util.ListBoxModel;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import javax.servlet.ServletException;
@@ -46,10 +49,12 @@ import org.kohsuke.stapler.QueryParameter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.Maps;
+import com.puppetlabs.geppetto.common.Strings;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
 import com.puppetlabs.geppetto.forge.jenkins.PPProblemsAdvisor.ProblemsAdvisorDescriptor;
+import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
@@ -276,6 +281,28 @@ public class ForgeValidator extends Builder {
 			: complianceLevel;
 	}
 
+	private ForgeResult createForgeResult(ValidationResult data, Properties props) {
+		ForgeResult forgeResult = new ForgeResult();
+		forgeResult.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
+		forgeResult.setVersion(format("%s-%s", props.getProperty("version"), props.getProperty("git.build.time")));
+		VersionedName moduleSlug = data.getModuleSlug();
+		if(moduleSlug != null) {
+			StringBuilder bld = new StringBuilder();
+			moduleSlug.toString(bld, '-');
+			forgeResult.setRelease(bld.toString());
+		}
+		Map<String, Map<String, Object>> resultMap = new HashMap<>();
+		for(Diagnostic diag : data.getUnfilteredLevelDiagnostics()) {
+			ComplianceDiagnostic cdiag = (ComplianceDiagnostic) diag;
+			Map<String, Object> cdiagMap = Maps.newHashMap();
+			cdiagMap.put("severity", cdiag.getSeverityString());
+			cdiagMap.put("diagnostics", cdiag.getChildren());
+			resultMap.put(cdiag.getComplianceLevel().toString(), cdiagMap);
+		}
+		forgeResult.setResults(resultMap);
+		return forgeResult;
+	}
+
 	public String getComplianceLevel() {
 		return _minComplianceLevel().name();
 	}
@@ -344,6 +371,17 @@ public class ForgeValidator extends Builder {
 
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+		Properties props = readVersionProperties(listener);
+		if(props == null)
+			return false;
+
+		listener.getLogger().format(
+			"Plug-in: %s.%s.%s-%s%n", props.get("groupId"), props.get("artifactId"), props.get("version"),
+			props.get("git.commit.id.abbrev"));
+
+		listener.getLogger().format("Commit time: %s%n", props.get("git.commit.time"));
+
+		listener.getLogger().format("Build time: %s%n", props.get("git.build.time"));
 
 		RepositoryInfo repoInfo = RepositoryInfo.getRepositoryInfo(build, listener);
 		FilePath moduleRoot;
@@ -366,8 +404,9 @@ public class ForgeValidator extends Builder {
 			moduleRoot = build.getWorkspace();
 			branch = null;
 		}
-		if(sourcePath != null)
-			moduleRoot = moduleRoot.child(sourcePath);
+		String sp = Strings.trimToNull(sourcePath);
+		if(sp != null)
+			moduleRoot = moduleRoot.child(sp);
 
 		ComplianceLevel min = _minComplianceLevel();
 		ComplianceLevel max = _maxComplianceLevel();
@@ -398,7 +437,6 @@ public class ForgeValidator extends Builder {
 					default:
 						listener.getLogger().format("%s%n", diag);
 				}
-				diagIter.remove();
 			}
 			else if(diag.getSeverity() == Diagnostic.ERROR)
 				validationErrors = true;
@@ -410,25 +448,26 @@ public class ForgeValidator extends Builder {
 		ValidationResult data = new ValidationResult(build);
 		build.addAction(data);
 		data.setResult(result);
-		if(jsonResultPath != null) {
-			try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jsonResultPath).write())) {
-				ForgeResult forgeResult = new ForgeResult();
-				forgeResult.setName("Geppetto");
-				forgeResult.setVersion("4.3.0");
-				Map<String, Map<String, Object>> resultMap = new HashMap<>();
-				for(Diagnostic diag : data.getUnfilteredLevelDiagnostics()) {
-					ComplianceDiagnostic cdiag = (ComplianceDiagnostic) diag;
-					Map<String, Object> cdiagMap = Maps.newHashMap();
-					cdiagMap.put("severity", cdiag.getSeverityString());
-					cdiagMap.put("diagnostics", cdiag.getChildren());
-					resultMap.put(cdiag.getComplianceLevel().toString(), cdiagMap);
-				}
-				forgeResult.setResults(resultMap);
+		String jp = Strings.trimToNull(jsonResultPath);
+		if(jp != null) {
+			try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jp).write())) {
 				ObjectMapper mapper = new ObjectMapper();
 				mapper.enable(SerializationFeature.INDENT_OUTPUT);
-				mapper.writeValue(out, forgeResult);
+				mapper.writeValue(out, createForgeResult(data, props));
 			}
 		}
 		return result.getSeverity() < Diagnostic.ERROR;
+	}
+
+	private Properties readVersionProperties(BuildListener listener) {
+		try (InputStream in = getClass().getResourceAsStream("version.properties")) {
+			Properties props = new Properties();
+			props.load(in);
+			return props;
+		}
+		catch(Exception e) {
+			e.printStackTrace(listener.error("The puppetforge plug-in is unable to read its own version.properties"));
+			return null;
+		}
 	}
 }

@@ -31,10 +31,13 @@ import org.kohsuke.stapler.export.ExportedBean;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
+import com.puppetlabs.geppetto.forge.model.VersionedName;
 
 @ExportedBean(defaultVisibility = 999)
 public class ValidationResult implements Action, Serializable, Cloneable {
 	private static final long serialVersionUID = 2584295798889630530L;
+
+	public static final String RELEASE_PREFIX = "Release: ";
 
 	private ResultWithDiagnostic<byte[]> resultDiagnostic;
 
@@ -135,6 +138,20 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 				if(d instanceof MultiComplianceDiagnostic)
 					return filter((MultiComplianceDiagnostic) d, getResultDiagnostics());
 		return Collections.emptyList();
+	}
+
+	/**
+	 * Return the slug of the validated module. The slug will only be present when exactly one
+	 * module is validated.
+	 *
+	 * @return The slug of the validated module.
+	 */
+	public VersionedName getModuleSlug() {
+		if(resultDiagnostic != null)
+			for(Diagnostic d : resultDiagnostic)
+				if(d.getSeverity() == Diagnostic.INFO && d.getMessage().startsWith(RELEASE_PREFIX))
+					return new VersionedName(d.getMessage().substring(RELEASE_PREFIX.length()));
+		return null;
 	}
 
 	public byte[] getResult() {

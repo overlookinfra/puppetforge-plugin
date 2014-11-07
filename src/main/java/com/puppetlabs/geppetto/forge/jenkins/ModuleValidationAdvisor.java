@@ -115,10 +115,21 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 			ValidationPreference modulefileExists, ValidationPreference modulefileExistsAndIsUsed,
 			ValidationPreference unexpectedSubmodule, ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
 			ValidationPreference whitespaceInTag) {
-		this.advisor = new ModuleValidationAdvisorBean(
-			circularDependency, dependencyVersionMismatch, deprecatedKey, missingForgeRequiredFields, moduleClassNotInInitPP,
-			moduleNameNotStrict, moduleRedefinition, modulefileExists, modulefileExistsAndIsUsed, unexpectedSubmodule, unrecognizedKey,
-			unresolvedReference, whitespaceInTag);
+		ModuleValidationAdvisorBean a = new ModuleValidationAdvisorBean();
+		a.setCircularDependency(circularDependency);
+		a.setDependencyVersionMismatch(dependencyVersionMismatch);
+		a.setDeprecatedKey(deprecatedKey);
+		a.setMissingForgeRequiredFields(missingForgeRequiredFields);
+		a.setModuleClassNotInInitPP(moduleClassNotInInitPP);
+		a.setModulefileExists(modulefileExists);
+		a.setModulefileExistsAndIsUsed(modulefileExistsAndIsUsed);
+		a.setModuleNameNotStrict(moduleNameNotStrict);
+		a.setModuleRedefinition(moduleRedefinition);
+		a.setUnexpectedSubmodule(unexpectedSubmodule);
+		a.setUnrecognizedKey(unrecognizedKey);
+		a.setUnresolvedReference(unresolvedReference);
+		a.setWhitespaceInTag(whitespaceInTag);
+		this.advisor = a;
 	}
 
 	public IModuleValidationAdvisor getAdvisor() {

@@ -20,11 +20,20 @@ public class ForgeResult {
 
 	private String version;
 
+	private String release;
+
 	/**
 	 * @return the name
 	 */
 	public String getName() {
 		return name;
+	}
+
+	/**
+	 * @return the release
+	 */
+	public String getRelease() {
+		return release;
 	}
 
 	/**
@@ -47,6 +56,14 @@ public class ForgeResult {
 	 */
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	/**
+	 * @param release
+	 *            the release to set
+	 */
+	public void setRelease(String release) {
+		this.release = release;
 	}
 
 	/**

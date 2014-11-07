@@ -47,6 +47,7 @@ import com.puppetlabs.geppetto.graph.RelativeFileHrefProducer;
 import com.puppetlabs.geppetto.graph.SVGProducer;
 import com.puppetlabs.geppetto.graph.dependency.DependencyGraphModule;
 import com.puppetlabs.geppetto.module.dsl.validation.IModuleValidationAdvisor;
+import com.puppetlabs.geppetto.module.dsl.validation.ModuleValidationAdvisorBean;
 import com.puppetlabs.geppetto.pp.dsl.validation.IPotentialProblemsAdvisor;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
@@ -112,6 +113,12 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		this.checkModuleSemantics = checkModuleSemantics;
 		this.ignoreFileOverride = ignoreFileOverride;
 		this.problemsAdvisor = problemsAdvisor;
+		if(!(checkModuleSemantics && checkReferences) && moduleValidationAdvisor.getUnresolvedReference() != ValidationPreference.IGNORE) {
+			if(!(moduleValidationAdvisor instanceof ModuleValidationAdvisorBean))
+				moduleValidationAdvisor = new ModuleValidationAdvisorBean(moduleValidationAdvisor);
+			((ModuleValidationAdvisorBean) moduleValidationAdvisor).setUnresolvedReference(ValidationPreference.IGNORE);
+		}
+
 		this.moduleValidationAdvisor = moduleValidationAdvisor;
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity;
 		this.puppetLintInverseOptions = puppetLintInverseOptions;
@@ -170,12 +177,18 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 				metadatas.add(md);
 		}
 
-		if(geppettoDiag.getSeverity() == Diagnostic.ERROR) {
+		if(geppettoDiag.getSeverity() == Diagnostic.ERROR || metadatas.isEmpty()) {
 			addGeppettoResult(geppettoDiag, null, result);
 			return null;
 		}
 
-		if(checkModuleSemantics) {
+		if(metadatas.size() == 1) {
+			Metadata md = metadatas.get(0);
+			result.addChild(new Diagnostic(Diagnostic.INFO, ValidationService.MODULE, String.format(
+				"%s%s-%s", ValidationResult.RELEASE_PREFIX, md.getName(), md.getVersion())));
+		}
+
+		if(checkReferences) {
 			File importedModulesDir = new File(getBuildDir(), IMPORTED_MODULES_ROOT);
 			importedModuleLocations = getForgeService(geppettoDiag).downloadDependencies(metadatas, importedModulesDir, geppettoDiag);
 		}
@@ -355,6 +368,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		options.setAllowFileOverride(!ignoreFileOverride);
 		if(options.isAllowFileOverride())
 			options = options.mergeFileOverride(diag);
+
 		return options;
 	}
 
