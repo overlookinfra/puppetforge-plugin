@@ -14,7 +14,7 @@ package com.puppetlabs.geppetto.forge.jenkins;
 import java.util.Map;
 
 public class ForgeResult {
-	private Map<String, Map<String, Object>> results;
+	private Map<String, Object> results;
 
 	private String name;
 
@@ -39,7 +39,7 @@ public class ForgeResult {
 	/**
 	 * @return the results
 	 */
-	public Map<String, Map<String, Object>> getResults() {
+	public Map<String, Object> getResults() {
 		return results;
 	}
 
@@ -70,7 +70,7 @@ public class ForgeResult {
 	 * @param results
 	 *            the results to set
 	 */
-	public void setResults(Map<String, Map<String, Object>> results) {
+	public void setResults(Map<String, Object> results) {
 		this.results = results;
 	}
 

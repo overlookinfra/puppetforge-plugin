@@ -31,18 +31,18 @@ import com.puppetlabs.geppetto.forge.impl.ForgeModule;
 import com.puppetlabs.geppetto.forge.model.Metadata;
 
 public abstract class ForgeCallable<T> implements FileCallable<T> {
+	private static final long serialVersionUID = -3048930993120683688L;
+
+	public static final String BUILD_DIR = ".geppetto";
+
+	public static final String IMPORTED_MODULES_ROOT = "importedModules";
+
 	public static boolean isParentOrEqual(File dir, File subdir) {
 		if(dir == null || subdir == null)
 			return false;
 
 		return dir.equals(subdir) || isParentOrEqual(dir, subdir.getParentFile());
 	}
-
-	private static final long serialVersionUID = -3048930993120683688L;
-
-	public static final String BUILD_DIR = ".geppetto";
-
-	public static final String IMPORTED_MODULES_ROOT = "importedModules";
 
 	private transient File buildDir;
 
@@ -77,6 +77,10 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		modules.add(getCommonModule());
 	}
 
+	protected Injector createInjector(List<Module> modules) {
+		return Guice.createInjector(modules);
+	}
+
 	protected Collection<File> findModuleRoots(Diagnostic diag) {
 		return getForge(diag).findModuleRoots(getSourceDir(), null);
 	}
@@ -98,7 +102,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 			List<Module> modules = new ArrayList<Module>();
 			addModules(diag, modules);
 			if(diag.getSeverity() <= Diagnostic.WARNING) {
-				injector = Guice.createInjector(modules);
+				injector = createInjector(modules);
 			}
 		}
 		return injector;

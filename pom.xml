@@ -224,11 +224,6 @@
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
-			<artifactId>com.puppetlabs.geppetto.ruby.jrubyparser</artifactId>
-			<version>${geppetto.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.validation</artifactId>
 			<version>${geppetto.version}</version>
 		</dependency>

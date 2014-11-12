@@ -11,13 +11,29 @@
 package com.puppetlabs.geppetto.forge.jenkins;
 
 import java.io.PrintStream;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
+import com.puppetlabs.geppetto.forge.model.Type;
+import com.puppetlabs.geppetto.forge.model.VersionedName;
 
 public class ResultWithDiagnostic<T> extends Diagnostic {
 	private static final long serialVersionUID = 1618870489419505392L;
 
 	private T result;
+
+	private Map<VersionedName, Collection<Type>> extractedTypes;
+
+	/**
+	 * @return the extractedTypes
+	 */
+	public Map<VersionedName, Collection<Type>> getExtractedTypes() {
+		return extractedTypes == null
+			? Collections.<VersionedName, Collection<Type>> emptyMap()
+			: extractedTypes;
+	}
 
 	/**
 	 * @return the result
@@ -34,6 +50,13 @@ public class ResultWithDiagnostic<T> extends Diagnostic {
 	public void log(PrintStream logger) {
 		for(Diagnostic child : this)
 			logger.println(child);
+	}
+
+	/**
+	 * @param extractedTypes
+	 */
+	public void setExtractedTypes(Map<VersionedName, Collection<Type>> extractedTypes) {
+		this.extractedTypes = extractedTypes;
 	}
 
 	/**

@@ -50,6 +50,10 @@
     <f:checkbox default="true"/>
   </f:entry>
 
+  <f:entry field="extractTypes" title="${%Extract Type documentation}">
+    <f:checkbox default="true"/>
+  </f:entry>
+
   <f:section title="Advanced Project Options">
     <f:advanced>
       <f:block><h4>Module Validation Preferences</h4></f:block>

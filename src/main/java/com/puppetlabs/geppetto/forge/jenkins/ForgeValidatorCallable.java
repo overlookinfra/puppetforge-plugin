@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,6 +33,9 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 
+import com.google.common.collect.Maps;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.puppetlabs.geppetto.common.os.FileUtils;
 import com.puppetlabs.geppetto.common.os.StreamUtil.OpenBAStream;
@@ -39,6 +43,8 @@ import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.ExceptionDiagnostic;
 import com.puppetlabs.geppetto.diagnostic.FileDiagnostic;
 import com.puppetlabs.geppetto.forge.model.Metadata;
+import com.puppetlabs.geppetto.forge.model.Type;
+import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.graph.DependencyGraphProducer;
 import com.puppetlabs.geppetto.graph.GithubURLHrefProducer;
 import com.puppetlabs.geppetto.graph.IHrefProducer;
@@ -54,14 +60,13 @@ import com.puppetlabs.geppetto.pp.dsl.validation.ValidationPreference;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintRunner.Issue;
 import com.puppetlabs.geppetto.puppetlint.PuppetLintService;
-import com.puppetlabs.geppetto.ruby.RubyHelper;
-import com.puppetlabs.geppetto.ruby.jrubyparser.JRubyServices;
 import com.puppetlabs.geppetto.validation.FileType;
 import com.puppetlabs.geppetto.validation.ValidationOptions;
 import com.puppetlabs.geppetto.validation.ValidationService;
 import com.puppetlabs.geppetto.validation.impl.ValidationModule;
 import com.puppetlabs.geppetto.validation.runner.BuildResult;
 import com.puppetlabs.geppetto.validation.runner.IEncodingProvider;
+import com.puppetlabs.geppetto.validation.runner.MetadataInfo;
 import com.puppetlabs.geppetto.validation.runner.PPDiagnosticsSetup;
 import com.puppetlabs.graph.ICancel;
 
@@ -75,6 +80,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	static final String IMPORTED_MODULES_ROOT = "importedModules";
 
 	private transient String sourceHrefPrefix;
+
+	private boolean extractTypes;
 
 	private boolean checkModuleSemantics;
 
@@ -104,7 +111,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, boolean ignoreFileOverride, Set<String> excludes,
 			String branchName, ComplianceLevel minComplianceLevel, ComplianceLevel maxComplianceLevel, boolean checkReferences,
 			boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
-			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions) {
+			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions, boolean extractTypes) {
 		super(forgeServiceURL, sourceURI, branchName);
 		this.excludes = excludes;
 		this.minComplianceLevel = minComplianceLevel;
@@ -123,6 +130,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity;
 		this.puppetLintInverseOptions = puppetLintInverseOptions;
 		this.puppetLintOptions = puppetLintOptions;
+		this.extractTypes = extractTypes;
 	}
 
 	private void addGeppettoResult(Diagnostic geppettoDiag, byte[] svg, ResultWithDiagnostic<byte[]> result) {
@@ -166,6 +174,16 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 				moduleRoot, issue.getPath())), issue.getLineNumber());
 	}
 
+	@Override
+	protected Injector createInjector(final List<Module> modules) {
+		return new PPDiagnosticsSetup() {
+			@Override
+			public Injector createInjector() {
+				return Guice.createInjector(modules);
+			}
+		}.createInjectorAndDoEMFRegistration();
+	}
+
 	private ValidationOptions geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result) throws IOException {
 
 		Diagnostic geppettoDiag = new Diagnostic();
@@ -199,8 +217,6 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		ComplianceDiagnostic bestDiag = null;
 		BuildResult bestResult = null;
 
-		RubyHelper.setRubyServicesFactory(JRubyServices.FACTORY);
-
 		Diagnostic levelDiags = new Diagnostic();
 		for(ComplianceLevel level : ComplianceLevel.values()) {
 			if(level.ordinal() < minComplianceLevel.ordinal())
@@ -211,7 +227,6 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			ComplianceDiagnostic levelDiag = new ComplianceDiagnostic(level);
 			levelDiag.setMessage(level.toString());
 			ValidationOptions options = getValidationOptions(level, moduleLocations, importedModuleLocations, levelDiag);
-			new PPDiagnosticsSetup(options).createInjectorAndDoEMFRegistration();
 			BuildResult buildResult = getValidationService(levelDiag).validate(
 				levelDiag, options, getSourceDir(), new NullProgressMonitor());
 
@@ -274,6 +289,17 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			svg = produceSVG(dotStream.getInputStream(), geppettoDiag);
 		}
 		addGeppettoResult(geppettoDiag, svg, result);
+		if(extractTypes) {
+			Map<VersionedName, Collection<Type>> extractedTypes = Maps.newHashMap();
+			for(MetadataInfo mi : bestResult.getModuleData().values()) {
+				Collection<Type> types = mi.getTypes();
+				if(types.size() > 0) {
+					Metadata md = mi.getMetadata();
+					extractedTypes.put(new VersionedName(md.getName(), md.getVersion()), types);
+				}
+			}
+			result.setExtractedTypes(extractedTypes);
+		}
 		return bestOptions;
 	}
 
@@ -346,6 +372,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		options.setCheckLayout(true);
 		options.setCheckModuleSemantics(checkModuleSemantics);
 		options.setCheckReferences(checkReferences);
+		options.setExtractTypes(extractTypes);
 		options.setValidationRoot(getSourceDir());
 
 		if(moduleLocations.size() == 1 && getSourceDir().equals(moduleLocations.iterator().next()))
