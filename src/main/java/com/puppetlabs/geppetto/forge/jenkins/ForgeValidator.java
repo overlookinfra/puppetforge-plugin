@@ -48,17 +48,21 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.SerializableString;
 import com.fasterxml.jackson.core.io.CharacterEscapes;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.Maps;
 import com.puppetlabs.geppetto.common.Strings;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
 import com.puppetlabs.geppetto.forge.jenkins.PPProblemsAdvisor.ProblemsAdvisorDescriptor;
-import com.puppetlabs.geppetto.forge.model.Type;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
@@ -83,6 +87,10 @@ public class ForgeValidator extends Builder {
 		}
 
 		public FormValidation doCheckJsonResultPath(@QueryParameter String value) throws IOException, ServletException {
+			return checkRelativePath(value);
+		}
+
+		public FormValidation doCheckJsonTypesPath(@QueryParameter String value) throws IOException, ServletException {
 			return checkRelativePath(value);
 		}
 
@@ -164,6 +172,39 @@ public class ForgeValidator extends Builder {
 		}
 	}
 
+	public static class HTMLEscapes extends CharacterEscapes {
+		private static final long serialVersionUID = 1L;
+
+		private static final int[] esc;
+		static {
+			esc = CharacterEscapes.standardAsciiEscapesForJSON();
+			esc['<'] = CharacterEscapes.ESCAPE_STANDARD;
+			esc['>'] = CharacterEscapes.ESCAPE_STANDARD;
+			esc['&'] = CharacterEscapes.ESCAPE_STANDARD;
+			esc['\''] = CharacterEscapes.ESCAPE_STANDARD;
+		}
+
+		@Override
+		public int[] getEscapeCodesForAscii() {
+			return esc;
+		}
+
+		@Override
+		public SerializableString getEscapeSequence(int ch) {
+			return null;
+		}
+	}
+
+	public static class VersionedNameSerializer extends JsonSerializer<VersionedName> {
+		@Override
+		public void serialize(VersionedName value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
+				JsonProcessingException {
+			StringBuilder bld = new StringBuilder();
+			value.toString(bld, '-');
+			jgen.writeString(bld.toString());
+		}
+	}
+
 	public static DiagnosticType VALIDATOR_TYPE = new DiagnosticType("VALIDATOR", ForgeValidator.class.getName());
 
 	public static ListBoxModel doFillValidationPreferenceItems() {
@@ -232,11 +273,11 @@ public class ForgeValidator extends Builder {
 
 	private final boolean checkModuleSemantics;
 
-	private final boolean extractTypes;
-
 	private final boolean ignoreFileOverride;
 
 	private final boolean inverseOptions;
+
+	private final String jsonTypesPath;
 
 	private final PPProblemsAdvisor problemsAdvisor;
 
@@ -257,10 +298,11 @@ public class ForgeValidator extends Builder {
 	private final ValidationImpact validationImpact;
 
 	@DataBoundConstructor
-	public ForgeValidator(String sourcePath, String jsonResultPath, String forgeServiceURL, boolean ignoreFileOverride, String excludes,
-			ComplianceLevel complianceLevel, ComplianceLevel maxComplianceLevel, Boolean checkReferences, Boolean checkModuleSemantics,
-			PPProblemsAdvisor problemsAdvisor, ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity,
-			String puppetLintOptions, boolean extractTypes, ValidationImpact validationImpact) throws FormValidation {
+	public ForgeValidator(String sourcePath, String jsonResultPath, String jsonTypesPath, String forgeServiceURL,
+			boolean ignoreFileOverride, String excludes, ComplianceLevel complianceLevel, ComplianceLevel maxComplianceLevel,
+			Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
+			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, String puppetLintOptions,
+			ValidationImpact validationImpact) throws FormValidation {
 		this.sourcePath = sourcePath;
 		this.jsonResultPath = jsonResultPath;
 		this.forgeServiceURL = forgeServiceURL == null
@@ -284,7 +326,7 @@ public class ForgeValidator extends Builder {
 		boolean[] inverse = new boolean[1];
 		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions, inverse);
 		inverseOptions = inverse[0];
-		this.extractTypes = extractTypes;
+		this.jsonTypesPath = jsonTypesPath;
 		this.validationImpact = validationImpact;
 	}
 
@@ -306,20 +348,12 @@ public class ForgeValidator extends Builder {
 			: validationImpact;
 	}
 
-	private ForgeResult createForgeResult(ValidationResult data, Map<VersionedName, Collection<Type>> types, Properties props) {
+	private ForgeResult createForgeResult(ValidationResult data, Properties props) {
 		ForgeResult forgeResult = new ForgeResult();
 		forgeResult.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
 		forgeResult.setVersion(format("%s-%s", props.getProperty("version"), props.getProperty("git.build.time")));
-		VersionedName moduleSlug = data.getModuleSlug();
+		forgeResult.setRelease(data.getModuleSlug());
 		Map<String, Object> resultMap = new HashMap<>();
-		if(moduleSlug != null) {
-			StringBuilder bld = new StringBuilder();
-			moduleSlug.toString(bld, '-');
-			forgeResult.setRelease(bld.toString());
-			Collection<Type> moduleTypes = types.get(moduleSlug);
-			if(!(moduleTypes == null || moduleTypes.isEmpty()))
-				resultMap.put("types", moduleTypes);
-		}
 		for(Diagnostic diag : data.getUnfilteredLevelDiagnostics()) {
 			ComplianceDiagnostic cdiag = (ComplianceDiagnostic) diag;
 			Map<String, Object> cdiagMap = Maps.newHashMap();
@@ -345,6 +379,23 @@ public class ForgeValidator extends Builder {
 
 	public String getJsonResultPath() {
 		return jsonResultPath;
+	}
+
+	public String getJsonTypesPath() {
+		return jsonTypesPath;
+	}
+
+	private ObjectMapper getMapper() {
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		mapper.getFactory().setCharacterEscapes(new HTMLEscapes());
+		SimpleModule module = new SimpleModule("Geppetto Custom Serializers");
+		VersionedNameSerializer vnSerializer = new VersionedNameSerializer();
+		module.addKeySerializer(VersionedName.class, vnSerializer);
+		module.addSerializer(VersionedName.class, vnSerializer);
+		mapper.registerModule(module);
+		return mapper;
 	}
 
 	public String getMaxComplianceLevel() {
@@ -395,10 +446,6 @@ public class ForgeValidator extends Builder {
 
 	public boolean isCheckReferences() {
 		return checkReferences;
-	}
-
-	public boolean isExtractTypes() {
-		return extractTypes;
 	}
 
 	public boolean isIgnoreFileOverride() {
@@ -452,10 +499,11 @@ public class ForgeValidator extends Builder {
 			max = x;
 		}
 
+		String typesPath = Strings.trimToNull(jsonTypesPath);
 		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
 			forgeServiceURL, sourceURI, ignoreFileOverride, excludeGlobs, branch, min, max, checkReferences, checkModuleSemantics,
 			getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, inverseOptions,
-			puppetLintOptions, extractTypes));
+			puppetLintOptions, typesPath != null));
 
 		// Emit non-validation diagnostics to the console
 		boolean validationErrors = false;
@@ -484,33 +532,19 @@ public class ForgeValidator extends Builder {
 		ValidationResult data = new ValidationResult(build);
 		build.addAction(data);
 		data.setResult(result);
+
 		String jp = Strings.trimToNull(jsonResultPath);
-		if(jp != null) {
-			try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jp).write())) {
-				final int[] esc = CharacterEscapes.standardAsciiEscapesForJSON();
-				esc['<'] = CharacterEscapes.ESCAPE_STANDARD;
-				esc['>'] = CharacterEscapes.ESCAPE_STANDARD;
-				esc['&'] = CharacterEscapes.ESCAPE_STANDARD;
-				esc['\''] = CharacterEscapes.ESCAPE_STANDARD;
-
-				ObjectMapper mapper = new ObjectMapper();
-				mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-				mapper.enable(SerializationFeature.INDENT_OUTPUT);
-				mapper.getFactory().setCharacterEscapes(new CharacterEscapes() {
-					private static final long serialVersionUID = 1L;
-
-					@Override
-					public int[] getEscapeCodesForAscii() {
-						return esc;
-					}
-
-					@Override
-					public SerializableString getEscapeSequence(int ch) {
-						return null;
-					}
-				});
-				mapper.writeValue(out, createForgeResult(data, result.getExtractedTypes(), props));
-			}
+		if(jp != null || typesPath != null) {
+			ObjectMapper mapper = getMapper();
+			if(jp != null)
+				try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jp).write())) {
+					mapper.writeValue(out, createForgeResult(data, props));
+				}
+			if(typesPath != null)
+				try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(typesPath).write())) {
+					mapper.writerWithType(mapper.getTypeFactory().constructMapType(Map.class, VersionedName.class, Collection.class)).writeValue(
+						out, result.getExtractedTypes());
+				}
 		}
 		switch(_validationImpact()) {
 			case FAIL_ON_ALL:

@@ -13,6 +13,8 @@ package com.puppetlabs.geppetto.forge.jenkins;
 
 import java.util.Map;
 
+import com.puppetlabs.geppetto.forge.model.VersionedName;
+
 public class ForgeResult {
 	private Map<String, Object> results;
 
@@ -20,7 +22,7 @@ public class ForgeResult {
 
 	private String version;
 
-	private String release;
+	private VersionedName release;
 
 	/**
 	 * @return the name
@@ -32,7 +34,7 @@ public class ForgeResult {
 	/**
 	 * @return the release
 	 */
-	public String getRelease() {
+	public VersionedName getRelease() {
 		return release;
 	}
 
@@ -62,7 +64,7 @@ public class ForgeResult {
 	 * @param release
 	 *            the release to set
 	 */
-	public void setRelease(String release) {
+	public void setRelease(VersionedName release) {
 		this.release = release;
 	}
 

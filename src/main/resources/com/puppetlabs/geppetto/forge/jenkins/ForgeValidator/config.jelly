@@ -26,6 +26,10 @@
     <f:textbox default="${descriptor.jsonResultPath}"/>
   </f:entry>
 
+  <f:entry field="jsonTypesPath" title="${%Relative path to JSON types information}">
+    <f:textbox default="${descriptor.jsonTypesPath}"/>
+  </f:entry>
+
   <f:entry field="excludeGlobs" title="${%Exclude Globs}">
     <f:textarea class="fixed-width" default="${descriptor.defaultExcludeGlobs}" />
   </f:entry>
