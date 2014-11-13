@@ -37,4 +37,8 @@ public class MultiComplianceDiagnostic extends Diagnostic {
 	public int getSeverity() {
 		return Diagnostic.INFO;
 	}
+
+	public int getWorstSeverity() {
+		return super.getSeverity();
+	}
 }

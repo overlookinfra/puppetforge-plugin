@@ -14,6 +14,10 @@
   <!--
     This jelly script is used for per-project configuration.
   -->
+  <f:entry field="validationImpact" title="${%When to fail the build}">
+    <f:select default="${descriptor.validationImpact}"/>
+  </f:entry>
+
   <f:entry field="sourcePath" title="${%Relative source path}">
     <f:textbox default="${descriptor.sourcePath}"/>
   </f:entry>

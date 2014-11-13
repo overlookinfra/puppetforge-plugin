@@ -263,6 +263,14 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 			: null;
 	}
 
+	public int getWorstLevelSeverity() {
+		if(resultDiagnostic != null)
+			for(Diagnostic d : resultDiagnostic)
+				if(d instanceof MultiComplianceDiagnostic)
+					return ((MultiComplianceDiagnostic) d).getWorstSeverity();
+		return Diagnostic.OK;
+	}
+
 	public void setResult(ResultWithDiagnostic<byte[]> resultDiagnostic) {
 		this.resultDiagnostic = resultDiagnostic;
 	}

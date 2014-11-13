@@ -101,10 +101,7 @@ public class ForgeValidator extends Builder {
 		}
 
 		public ListBoxModel doFillComplianceLevelItems() {
-			ListBoxModel items = new ListBoxModel();
-			for(ComplianceLevel level : ComplianceLevel.values())
-				items.add(level.toString(), level.name());
-			return items;
+			return fillEnumItems(ComplianceLevel.values());
 		}
 
 		public ListBoxModel doFillMaxComplianceLevelItems() {
@@ -113,6 +110,17 @@ public class ForgeValidator extends Builder {
 
 		public ListBoxModel doFillPuppetLintMaxSeverityItems() {
 			return doFillValidationPreferenceItems();
+		}
+
+		public ListBoxModel doFillValidationImpactItems() {
+			return fillEnumItems(ValidationImpact.values());
+		}
+
+		private <T extends Enum<?>> ListBoxModel fillEnumItems(T[] values) {
+			ListBoxModel items = new ListBoxModel();
+			for(T value : values)
+				items.add(value.toString(), value.name());
+			return items;
 		}
 
 		/**
@@ -246,11 +254,13 @@ public class ForgeValidator extends Builder {
 
 	private final Set<String> excludeGlobs;
 
+	private final ValidationImpact validationImpact;
+
 	@DataBoundConstructor
 	public ForgeValidator(String sourcePath, String jsonResultPath, String forgeServiceURL, boolean ignoreFileOverride, String excludes,
 			ComplianceLevel complianceLevel, ComplianceLevel maxComplianceLevel, Boolean checkReferences, Boolean checkModuleSemantics,
 			PPProblemsAdvisor problemsAdvisor, ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity,
-			String puppetLintOptions, boolean extractTypes) throws FormValidation {
+			String puppetLintOptions, boolean extractTypes, ValidationImpact validationImpact) throws FormValidation {
 		this.sourcePath = sourcePath;
 		this.jsonResultPath = jsonResultPath;
 		this.forgeServiceURL = forgeServiceURL == null
@@ -275,6 +285,7 @@ public class ForgeValidator extends Builder {
 		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions, inverse);
 		inverseOptions = inverse[0];
 		this.extractTypes = extractTypes;
+		this.validationImpact = validationImpact;
 	}
 
 	private ComplianceLevel _maxComplianceLevel() {
@@ -287,6 +298,12 @@ public class ForgeValidator extends Builder {
 		return complianceLevel == null
 			? PuppetTarget.getDefault().getComplianceLevel()
 			: complianceLevel;
+	}
+
+	private ValidationImpact _validationImpact() {
+		return validationImpact == null
+			? ValidationImpact.DO_NOT_FAIL
+			: validationImpact;
 	}
 
 	private ForgeResult createForgeResult(ValidationResult data, Map<VersionedName, Collection<Type>> types, Properties props) {
@@ -366,6 +383,10 @@ public class ForgeValidator extends Builder {
 
 	public String getSourcePath() {
 		return sourcePath;
+	}
+
+	public String getValidationImpact() {
+		return _validationImpact().name();
 	}
 
 	public boolean isCheckModuleSemantics() {
@@ -491,7 +512,13 @@ public class ForgeValidator extends Builder {
 				mapper.writeValue(out, createForgeResult(data, result.getExtractedTypes(), props));
 			}
 		}
-		return result.getSeverity() < Diagnostic.ERROR;
+		switch(_validationImpact()) {
+			case FAIL_ON_ALL:
+				return result.getSeverity() < Diagnostic.ERROR;
+			case FAIL_ON_ANY:
+				return data.getWorstLevelSeverity() < Diagnostic.ERROR;
+		}
+		return true;
 	}
 
 	private Properties readVersionProperties(BuildListener listener) {
