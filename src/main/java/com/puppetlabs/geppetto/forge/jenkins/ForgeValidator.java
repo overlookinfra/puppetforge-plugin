@@ -510,7 +510,7 @@ public class ForgeValidator extends Builder {
 		Iterator<Diagnostic> diagIter = result.iterator();
 		while(diagIter.hasNext()) {
 			Diagnostic diag = diagIter.next();
-			if(!(diag instanceof ValidationDiagnostic || diag instanceof MultiComplianceDiagnostic)) {
+			if(!(diag instanceof MultiComplianceDiagnostic)) {
 				switch(diag.getSeverity()) {
 					case Diagnostic.ERROR:
 						listener.error("%s", diag);

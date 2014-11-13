@@ -11,6 +11,9 @@
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
+import java.util.List;
+
+import com.google.common.collect.Lists;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
 
@@ -33,9 +36,31 @@ public class MultiComplianceDiagnostic extends Diagnostic {
 		return best;
 	}
 
+	public ComplianceDiagnostic getBestDiagnostic() {
+		for(Diagnostic child : this) {
+			ComplianceDiagnostic cdiag = (ComplianceDiagnostic) child;
+			if(cdiag.getComplianceLevel() == best)
+				return cdiag;
+		}
+		return null;
+	}
+
+	public List<ComplianceDiagnostic> getOtherDiagnostic() {
+		List<ComplianceDiagnostic> others = Lists.newArrayList();
+		for(Diagnostic child : this) {
+			ComplianceDiagnostic cdiag = (ComplianceDiagnostic) child;
+			if(cdiag.getComplianceLevel() != best)
+				others.add(cdiag);
+		}
+		return others;
+	}
+
 	@Override
 	public int getSeverity() {
-		return Diagnostic.INFO;
+		Diagnostic bestDiagnostic = getBestDiagnostic();
+		return bestDiagnostic == null
+			? Diagnostic.OK
+			: bestDiagnostic.getSeverity();
 	}
 
 	public int getWorstSeverity() {

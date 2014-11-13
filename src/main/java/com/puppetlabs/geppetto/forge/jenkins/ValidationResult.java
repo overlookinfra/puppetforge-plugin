@@ -20,7 +20,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -28,10 +27,9 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.export.ExportedBean;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
+import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 
 @ExportedBean(defaultVisibility = 999)
 public class ValidationResult implements Action, Serializable, Cloneable {
@@ -91,25 +89,6 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
 	}
 
-	private List<Diagnostic> filter(MultiComplianceDiagnostic verSpecifics, List<Diagnostic> commonDiagnostics) {
-		Set<String> commonSet = Sets.newHashSet();
-		for(Diagnostic cDiag : commonDiagnostics)
-			commonSet.add(cDiag.toString());
-
-		List<Diagnostic> filtered = Lists.newArrayList();
-		for(Diagnostic verSpecific : verSpecifics) {
-			Diagnostic copy = new Diagnostic();
-			for(Diagnostic diag : verSpecific)
-				if(!commonSet.contains(diag.toString()))
-					copy.addChild(diag);
-			if(!copy.getChildren().isEmpty()) {
-				copy.setMessage(verSpecific.getMessage());
-				filtered.add(copy);
-			}
-		}
-		return filtered;
-	}
-
 	public Api getApi() {
 		return new Api(this);
 	}
@@ -132,14 +111,6 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return "/plugin/puppetforge/icons/puppetlabs-48x48.png";
 	}
 
-	public List<Diagnostic> getLevelDiagnostics() {
-		if(resultDiagnostic != null)
-			for(Diagnostic d : resultDiagnostic)
-				if(d instanceof MultiComplianceDiagnostic)
-					return filter((MultiComplianceDiagnostic) d, getResultDiagnostics());
-		return Collections.emptyList();
-	}
-
 	/**
 	 * Return the slug of the validated module. The slug will only be present when exactly one
 	 * module is validated.
@@ -154,6 +125,18 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 		return null;
 	}
 
+	private MultiComplianceDiagnostic getMultiDiagnostic() {
+		if(resultDiagnostic != null)
+			for(Diagnostic d : resultDiagnostic)
+				if(d instanceof MultiComplianceDiagnostic)
+					return (MultiComplianceDiagnostic) d;
+		return new MultiComplianceDiagnostic(PuppetTarget.getDefault().getComplianceLevel());
+	}
+
+	public List<ComplianceDiagnostic> getOtherDiagnostics() {
+		return getMultiDiagnostic().getOtherDiagnostic();
+	}
+
 	public byte[] getResult() {
 		return resultDiagnostic == null
 			? null
@@ -161,22 +144,14 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 	}
 
 	public String getResultComplianceLevel() {
-		if(resultDiagnostic != null)
-			for(Diagnostic d : resultDiagnostic)
-				if(d instanceof MultiComplianceDiagnostic)
-					return ((MultiComplianceDiagnostic) d).getBest().toString();
-		return null;
+		return getMultiDiagnostic().getBest().toString();
 	}
 
 	public List<Diagnostic> getResultDiagnostics() {
-		if(resultDiagnostic == null || resultDiagnostic.getChildren().isEmpty())
-			return Collections.<Diagnostic> emptyList();
-
-		List<Diagnostic> validationDiagnostics = Lists.newArrayList();
-		for(Diagnostic diag : resultDiagnostic)
-			if(diag instanceof ValidationDiagnostic)
-				validationDiagnostics.add(diag);
-		return validationDiagnostics;
+		ComplianceDiagnostic best = getMultiDiagnostic().getBestDiagnostic();
+		return best == null
+			? Collections.<Diagnostic> emptyList()
+			: best.getChildren();
 	}
 
 	public int getResultDiagnosticsCount() {
@@ -239,11 +214,7 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 	}
 
 	public List<Diagnostic> getUnfilteredLevelDiagnostics() {
-		if(resultDiagnostic != null)
-			for(Diagnostic d : resultDiagnostic)
-				if(d instanceof MultiComplianceDiagnostic)
-					return d.getChildren();
-		return Collections.emptyList();
+		return getMultiDiagnostic().getChildren();
 	}
 
 	protected String getUrlFor(String item) {
@@ -264,11 +235,7 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 	}
 
 	public int getWorstLevelSeverity() {
-		if(resultDiagnostic != null)
-			for(Diagnostic d : resultDiagnostic)
-				if(d instanceof MultiComplianceDiagnostic)
-					return ((MultiComplianceDiagnostic) d).getWorstSeverity();
-		return Diagnostic.OK;
+		return getMultiDiagnostic().getWorstSeverity();
 	}
 
 	public void setResult(ResultWithDiagnostic<byte[]> resultDiagnostic) {

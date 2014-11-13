@@ -276,8 +276,6 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		}
 		MultiComplianceDiagnostic mcDiags = new MultiComplianceDiagnostic(bestDiag.getComplianceLevel());
 		mcDiags.addChildren(levelDiags.getChildren());
-
-		geppettoDiag.addChildren(bestDiag.getChildren());
 		geppettoDiag.addChild(mcDiags);
 
 		byte[] svg = null;

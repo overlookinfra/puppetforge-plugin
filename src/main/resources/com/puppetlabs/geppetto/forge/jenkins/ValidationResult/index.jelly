@@ -78,10 +78,11 @@
 				<j:otherwise>The validation did not produce any diagnostics</j:otherwise>
 			</j:choose>
 			
-			<j:forEach var="pver" items="${it.levelDiagnostics}">
+			<j:forEach var="pver" items="${it.otherDiagnostics}">
 				<j:choose>
 					<j:if test="${pver.children.size() != 0}">
 						<h2>Diagnostics for ${pver.message}</h2>
+						<l:expandButton title="Show ${pver.warningCount} warnings and ${pver.errorCount} errors ...">
 						<table id="validationDiagnosticsTable" class="pane sortable">
 							<thead>
 								<tr>
@@ -111,6 +112,7 @@
 								</j:forEach>
 							</tbody>
 						</table>
+						</l:expandButton>
 					</j:if>
 				</j:choose>
 			</j:forEach>
