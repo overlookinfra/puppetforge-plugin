@@ -43,8 +43,8 @@
 			</j:choose>
 			<br/>
 			<j:choose>
+				<h2>Diagnostics for ${it.resultComplianceLevel} (best)</h2>
 				<j:when test="${it.resultDiagnosticsCount != 0}">
-					<h2>Diagnostics for ${it.resultComplianceLevel} (best)</h2>
 					<table id="validationDiagnosticsTable" class="pane sortable">
 						<thead>
 							<tr>
@@ -77,43 +77,44 @@
 				</j:when>
 				<j:otherwise>The validation did not produce any diagnostics</j:otherwise>
 			</j:choose>
-			
+
 			<j:forEach var="pver" items="${it.otherDiagnostics}">
+				<h2>Diagnostics for ${pver.message}</h2>
 				<j:choose>
-					<j:if test="${pver.children.size() != 0}">
-						<h2>Diagnostics for ${pver.message}</h2>
+					<j:when test="${pver.children.size() != 0}">
 						<l:expandButton title="Show ${pver.warningCount} warnings and ${pver.errorCount} errors ...">
-						<table id="validationDiagnosticsTable" class="pane sortable">
-							<thead>
-								<tr>
-									<th width="80px" class="pane-header">Severity</th>
-									<th width="60%" class="pane-header">Description</th>
-									<th class="pane-header">Location</th>
-								</tr>
-							</thead>
-							<tbody>
-								<j:forEach var="diag" items="${pver.children}">
-									<j:if test="${diag.path != null}">
-										<tr>
-											<td class="pane">${diag.severityString}</td>
-											<td title="${diag.message}" class="pane">${diag.message}</td>
-											<td class="pane">
-												<j:choose>
-													<j:when test="${diag.line > 0}">
-														<a href="${diag.hrefPrefix}${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
-													</j:when>
-													<j:otherwise>
-														<a href="${diag.hrefPrefix}${diag.path}" target="_blank">${diag.path}</a>
-													</j:otherwise>
-												</j:choose>
-											</td>
-										</tr>
-									</j:if>
-								</j:forEach>
-							</tbody>
-						</table>
+							<table id="validationDiagnosticsTable" class="pane sortable">
+								<thead>
+									<tr>
+										<th width="80px" class="pane-header">Severity</th>
+										<th width="60%" class="pane-header">Description</th>
+										<th class="pane-header">Location</th>
+									</tr>
+								</thead>
+								<tbody>
+									<j:forEach var="diag" items="${pver.children}">
+										<j:if test="${diag.path != null}">
+											<tr>
+												<td class="pane">${diag.severityString}</td>
+												<td title="${diag.message}" class="pane">${diag.message}</td>
+												<td class="pane">
+													<j:choose>
+														<j:when test="${diag.line > 0}">
+															<a href="${diag.hrefPrefix}${diag.path}#L${diag.line}" target="_blank">${diag.path}: ${diag.line}</a>
+														</j:when>
+														<j:otherwise>
+															<a href="${diag.hrefPrefix}${diag.path}" target="_blank">${diag.path}</a>
+														</j:otherwise>
+													</j:choose>
+												</td>
+											</tr>
+										</j:if>
+									</j:forEach>
+								</tbody>
+							</table>
 						</l:expandButton>
-					</j:if>
+					</j:when>
+					<j:otherwise>The validation did not produce any diagnostics</j:otherwise>
 				</j:choose>
 			</j:forEach>
 		</l:main-panel>
