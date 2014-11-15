@@ -15,12 +15,14 @@ import static com.puppetlabs.geppetto.forge.Forge.FORGE;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import com.google.inject.Module;
+import com.puppetlabs.geppetto.common.os.FileUtils;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.forge.Forge;
 import com.puppetlabs.geppetto.forge.client.OAuthModule;
@@ -78,10 +80,17 @@ public class ForgePublisherCallable extends ForgeServiceCallable<Diagnostic> {
 			return result;
 		}
 
+		FileFilter fileFilter = new FileFilter() {
+			@Override
+			public boolean accept(File file) {
+				return FileUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
+			}
+		};
+
 		List<File> tarBalls = new ArrayList<File>();
 		Forge forge = getForge(result);
 		for(File moduleRoot : moduleRoots) {
-			File tarBall = forge.build(moduleRoot, builtModules, null, null, null, result);
+			File tarBall = forge.build(moduleRoot, builtModules, fileFilter, null, null, result);
 			if(tarBall != null)
 				tarBalls.add(tarBall);
 		}

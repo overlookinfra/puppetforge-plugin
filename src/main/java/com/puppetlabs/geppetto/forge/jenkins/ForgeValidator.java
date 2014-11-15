@@ -34,7 +34,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -348,6 +347,34 @@ public class ForgeValidator extends Builder {
 			: validationImpact;
 	}
 
+	private boolean consoleReport(Diagnostic diag, BuildListener listener, boolean[] hardError) {
+		if(diag instanceof ValidationDiagnostic)
+			return diag.getSeverity() == Diagnostic.ERROR;
+
+		List<Diagnostic> children = diag.getChildren();
+		if(!children.isEmpty()) {
+			boolean validationErrors = false;
+			for(Diagnostic cdiag : diag)
+				if(consoleReport(cdiag, listener, hardError))
+					validationErrors = true;
+			return validationErrors;
+		}
+
+		switch(diag.getSeverity()) {
+			case Diagnostic.ERROR:
+				listener.error("%s", diag);
+				hardError[0] = true;
+				break;
+			case Diagnostic.FATAL:
+				listener.fatalError("%s", diag);
+				hardError[0] = true;
+				break;
+			default:
+				listener.getLogger().format("%s%n", diag);
+		}
+		return false;
+	}
+
 	private ForgeResult createForgeResult(ValidationResult data, Properties props) {
 		ForgeResult forgeResult = new ForgeResult();
 		forgeResult.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
@@ -506,28 +533,11 @@ public class ForgeValidator extends Builder {
 			puppetLintOptions, typesPath != null));
 
 		// Emit non-validation diagnostics to the console
-		boolean validationErrors = false;
-		Iterator<Diagnostic> diagIter = result.iterator();
-		while(diagIter.hasNext()) {
-			Diagnostic diag = diagIter.next();
-			if(!(diag instanceof MultiComplianceDiagnostic)) {
-				switch(diag.getSeverity()) {
-					case Diagnostic.ERROR:
-						listener.error("%s", diag);
-						break;
-					case Diagnostic.FATAL:
-						listener.fatalError("%s", diag);
-						break;
-					default:
-						listener.getLogger().format("%s%n", diag);
-				}
-			}
-			else if(diag.getSeverity() == Diagnostic.ERROR)
-				validationErrors = true;
-		}
-
-		if(validationErrors)
+		boolean[] otherErrors = new boolean[] { false };
+		if(consoleReport(result, listener, otherErrors))
 			listener.error("There are validation errors. See Validation Result for details");
+		if(otherErrors[0])
+			return false;
 
 		ValidationResult data = new ValidationResult(build);
 		build.addAction(data);

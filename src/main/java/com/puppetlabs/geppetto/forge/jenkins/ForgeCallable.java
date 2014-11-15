@@ -15,7 +15,6 @@ import hudson.FilePath.FileCallable;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,7 +23,6 @@ import java.util.List;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.puppetlabs.geppetto.common.os.FileUtils;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.forge.Forge;
 import com.puppetlabs.geppetto.forge.impl.ForgeModule;
@@ -63,17 +61,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 	}
 
 	protected void addModules(Diagnostic diagnostic, List<Module> modules) {
-		modules.add(new ForgeModule() {
-			@Override
-			public FileFilter getFileFilter() {
-				return new FileFilter() {
-					@Override
-					public boolean accept(File file) {
-						return FileUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
-					}
-				};
-			}
-		});
+		modules.add(new ForgeModule());
 		modules.add(getCommonModule());
 	}
 

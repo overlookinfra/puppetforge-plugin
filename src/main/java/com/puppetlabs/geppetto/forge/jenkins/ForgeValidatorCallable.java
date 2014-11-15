@@ -14,6 +14,7 @@ import hudson.remoting.VirtualChannel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -34,6 +35,7 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -43,6 +45,7 @@ import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.ExceptionDiagnostic;
 import com.puppetlabs.geppetto.diagnostic.FileDiagnostic;
 import com.puppetlabs.geppetto.forge.model.Metadata;
+import com.puppetlabs.geppetto.forge.model.ModuleName;
 import com.puppetlabs.geppetto.forge.model.Type;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.graph.DependencyGraphProducer;
@@ -195,7 +198,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 				metadatas.add(md);
 		}
 
-		if(geppettoDiag.getSeverity() == Diagnostic.ERROR || metadatas.isEmpty()) {
+		if(metadatas.isEmpty()) {
 			addGeppettoResult(geppettoDiag, null, result);
 			return null;
 		}
@@ -213,6 +216,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		if(importedModuleLocations == null)
 			importedModuleLocations = Collections.emptyList();
 
+		// Any diagnostic that the metadata retrieval gave will be added again when we validate
+		geppettoDiag = new Diagnostic();
 		ValidationOptions bestOptions = null;
 		ComplianceDiagnostic bestDiag = null;
 		BuildResult bestResult = null;
@@ -230,7 +235,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			BuildResult buildResult = getValidationService(levelDiag).validate(
 				levelDiag, options, getSourceDir(), new NullProgressMonitor());
 
-			if(levelDiags.getChildren().isEmpty() || levelDiag.getSeverity() < levelDiags.getSeverity()) {
+			if(bestResult == null || levelDiags.getChildren().isEmpty() || levelDiag.getSeverity() < levelDiags.getSeverity()) {
 				bestDiag = levelDiag;
 				bestOptions = options;
 				bestResult = buildResult;
@@ -289,13 +294,15 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		addGeppettoResult(geppettoDiag, svg, result);
 		if(extractTypes) {
 			Map<VersionedName, Collection<Type>> extractedTypes = Maps.newHashMap();
-			for(MetadataInfo mi : bestResult.getModuleData().values()) {
-				Collection<Type> types = mi.getTypes();
-				if(types.size() > 0) {
-					Metadata md = mi.getMetadata();
-					extractedTypes.put(new VersionedName(md.getName(), md.getVersion()), types);
+			Multimap<ModuleName, MetadataInfo> moduleData = bestResult.getModuleData();
+			if(moduleData != null)
+				for(MetadataInfo mi : bestResult.getModuleData().values()) {
+					Collection<Type> types = mi.getTypes();
+					if(types.size() > 0) {
+						Metadata md = mi.getMetadata();
+						extractedTypes.put(new VersionedName(md.getName(), md.getVersion()), types);
+					}
 				}
-			}
 			result.setExtractedTypes(extractedTypes);
 		}
 		return bestOptions;
@@ -386,6 +393,12 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			}
 		});
 
+		options.setValidationFilter(new FileFilter() {
+			@Override
+			public boolean accept(File file) {
+				return !isParentOrEqual(getBuildDir(), file);
+			}
+		});
 		options.setSearchPath(getSearchPath(moduleLocations, importedModuleLocations));
 		options.setProblemsAdvisor(problemsAdvisor);
 		options.setModuleValidationAdvisor(moduleValidationAdvisor);
