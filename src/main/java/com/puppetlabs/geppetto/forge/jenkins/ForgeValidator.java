@@ -359,6 +359,9 @@ public class ForgeValidator extends Builder {
 					validationErrors = true;
 			return validationErrors;
 		}
+		if(diag instanceof ComplianceDiagnostic)
+			// Empty compliance diagnostic. Don't report the compliance level
+			return false;
 
 		switch(diag.getSeverity()) {
 			case Diagnostic.ERROR:
