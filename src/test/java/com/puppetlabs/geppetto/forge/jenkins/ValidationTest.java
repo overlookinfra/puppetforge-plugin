@@ -167,6 +167,11 @@ public class ValidationTest {
 		validateTarball(getTarballFile(new VersionedName("mcanevet", "hostapd", "0.2.0")));
 	}
 
+	@Test
+	public void handleNoTypesOrFunctions() throws Exception {
+		validateTarball(getTarballFile(new VersionedName("maestrodev", "jetty", "1.1.2")));
+	}
+
 	// @Test
 	public void memoryLeak() throws IOException {
 		final PathMatcher glob = FileSystems.getDefault().getPathMatcher("regex:.*\\.tar\\.gz");
