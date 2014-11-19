@@ -10,7 +10,7 @@
 	<parent>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>plugin</artifactId>
-		<version>1.557</version>
+		<version>1.581</version>
 	</parent>
 
 	<groupId>com.puppetlabs.geppetto</groupId>
@@ -112,6 +112,13 @@
 				<configuration>
 					<pluginFirstClassLoader>true</pluginFirstClassLoader>
 					<globalMaskClasses>org.apache.log4j.</globalMaskClasses>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Djenkins.test.timeout=0 -Djsse.enableSNIExtension=false -Dguice.custom.loader=false -XX:+CMSClassUnloadingEnabled</argLine>
+				<!-- <argLine>-Djenkins.test.timeout=0 -Djsse.enableSNIExtension=false -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=delay=40s,duration=1800s,name=ValidationRecording,filename=/home/thhal/tmp/validation.jfr,settings=/home/thhal/tmp/settings.jfc</argLine>  -->	
 				</configuration>
 			</plugin>
 		</plugins>
@@ -299,6 +306,12 @@
 			<groupId>org.eclipse.jgit</groupId>
 			<artifactId>org.eclipse.jgit</artifactId>
 			<version>3.4.1.201406201815-r</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>4.0-beta5</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>log4j</groupId>

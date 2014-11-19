@@ -44,8 +44,10 @@ import com.puppetlabs.geppetto.common.os.StreamUtil.OpenBAStream;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.ExceptionDiagnostic;
 import com.puppetlabs.geppetto.diagnostic.FileDiagnostic;
+import com.puppetlabs.geppetto.forge.model.ForgeDocs;
 import com.puppetlabs.geppetto.forge.model.Metadata;
 import com.puppetlabs.geppetto.forge.model.ModuleName;
+import com.puppetlabs.geppetto.forge.model.NamedDocItem;
 import com.puppetlabs.geppetto.forge.model.Type;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.graph.DependencyGraphProducer;
@@ -84,7 +86,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private transient String sourceHrefPrefix;
 
-	private boolean extractTypes;
+	private boolean extractDocs;
 
 	private boolean checkModuleSemantics;
 
@@ -100,6 +102,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 	private IPotentialProblemsAdvisor problemsAdvisor;
 
+	private boolean produceGraph;
+
 	private IModuleValidationAdvisor moduleValidationAdvisor;
 
 	private ComplianceLevel minComplianceLevel;
@@ -114,7 +118,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	public ForgeValidatorCallable(String forgeServiceURL, String sourceURI, boolean ignoreFileOverride, Set<String> excludes,
 			String branchName, ComplianceLevel minComplianceLevel, ComplianceLevel maxComplianceLevel, boolean checkReferences,
 			boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
-			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions, boolean extractTypes) {
+			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions, boolean extractDocs,
+			boolean produceGraph) {
 		super(forgeServiceURL, sourceURI, branchName);
 		this.excludes = excludes;
 		this.minComplianceLevel = minComplianceLevel;
@@ -133,7 +138,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		this.puppetLintMaxSeverity = puppetLintMaxSeverity;
 		this.puppetLintInverseOptions = puppetLintInverseOptions;
 		this.puppetLintOptions = puppetLintOptions;
-		this.extractTypes = extractTypes;
+		this.extractDocs = extractDocs;
+		this.produceGraph = produceGraph;
 	}
 
 	private void addGeppettoResult(Diagnostic geppettoDiag, byte[] svg, ResultWithDiagnostic<byte[]> result) {
@@ -284,26 +290,31 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		geppettoDiag.addChild(mcDiags);
 
 		byte[] svg = null;
-		if(checkModuleSemantics && geppettoDiag.getSeverity() < Diagnostic.ERROR) {
+		if(bestOptions.isProduceGraph() && checkModuleSemantics && geppettoDiag.getSeverity() < Diagnostic.ERROR) {
 			OpenBAStream dotStream = new OpenBAStream();
 			ICancel cancel = new ProgressMonitorCancelIndicator(new NullProgressMonitor(), 1);
 			getGraphProducer(geppettoDiag).produceGraph(
 				cancel, "", moduleLocations.toArray(new File[moduleLocations.size()]), dotStream, bestResult, result);
 			svg = produceSVG(dotStream.getInputStream(), geppettoDiag);
 		}
+
 		addGeppettoResult(geppettoDiag, svg, result);
-		if(extractTypes) {
-			Map<VersionedName, Collection<Type>> extractedTypes = Maps.newHashMap();
+		if(extractDocs) {
+			Map<VersionedName, ForgeDocs> extractedDocs = Maps.newHashMap();
 			Multimap<ModuleName, MetadataInfo> moduleData = bestResult.getModuleData();
 			if(moduleData != null)
 				for(MetadataInfo mi : bestResult.getModuleData().values()) {
 					Collection<Type> types = mi.getTypes();
-					if(types.size() > 0) {
+					Collection<NamedDocItem> functions = mi.getFunctions();
+					if(types.size() > 0 || functions.size() > 0) {
 						Metadata md = mi.getMetadata();
-						extractedTypes.put(new VersionedName(md.getName(), md.getVersion()), types);
+						ForgeDocs fd = new ForgeDocs();
+						fd.setFunctions(functions);
+						fd.setTypes(types);
+						extractedDocs.put(new VersionedName(md.getName(), md.getVersion()), fd);
 					}
 				}
-			result.setExtractedTypes(extractedTypes);
+			result.setExtractedDocs(extractedDocs);
 		}
 		return bestOptions;
 	}
@@ -377,7 +388,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		options.setCheckLayout(true);
 		options.setCheckModuleSemantics(checkModuleSemantics);
 		options.setCheckReferences(checkReferences);
-		options.setExtractTypes(extractTypes);
+		options.setExtractDocs(extractDocs);
 		options.setValidationRoot(getSourceDir());
 
 		if(moduleLocations.size() == 1 && getSourceDir().equals(moduleLocations.iterator().next()))
@@ -404,6 +415,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		options.setModuleValidationAdvisor(moduleValidationAdvisor);
 		options.setExcludeGlobs(excludes);
 		options.setAllowFileOverride(!ignoreFileOverride);
+		options.setProduceGraph(produceGraph);
 		if(options.isAllowFileOverride())
 			options = options.mergeFileOverride(diag);
 

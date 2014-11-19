@@ -36,7 +36,7 @@ public abstract class ForgeServiceCallable<T extends Diagnostic> extends ForgeCa
 		super.addModules(diagnostic, modules);
 		modules.add(new ForgeHttpModule() {
 			@Override
-			protected String getBaseURL() {
+			protected String doGetBaseURL() {
 				return forgeServiceURL;
 			}
 		});

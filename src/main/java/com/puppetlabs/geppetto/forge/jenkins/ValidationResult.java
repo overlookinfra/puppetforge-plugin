@@ -11,9 +11,9 @@
 package com.puppetlabs.geppetto.forge.jenkins;
 
 import hudson.Functions;
-import hudson.model.Action;
 import hudson.model.AbstractBuild;
 import hudson.model.Api;
+import hudson.model.Run;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
+
+import jenkins.model.RunAction2;
 
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -32,14 +34,14 @@ import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 
 @ExportedBean(defaultVisibility = 999)
-public class ValidationResult implements Action, Serializable, Cloneable {
-	private static final long serialVersionUID = 2584295798889630530L;
+public class ValidationResult implements RunAction2, Serializable, Cloneable {
+	private static final long serialVersionUID = 1L;
 
 	public static final String RELEASE_PREFIX = "Release: ";
 
 	private ResultWithDiagnostic<byte[]> resultDiagnostic;
 
-	private final AbstractBuild<?, ?> build;
+	private transient AbstractBuild<?, ?> build;
 
 	private final int cardinal;
 
@@ -236,6 +238,16 @@ public class ValidationResult implements Action, Serializable, Cloneable {
 
 	public int getWorstLevelSeverity() {
 		return getMultiDiagnostic().getWorstSeverity();
+	}
+
+	@Override
+	public void onAttached(Run<?, ?> r) {
+		// unnecessary, constructor already does this
+	}
+
+	@Override
+	public void onLoad(Run<?, ?> r) {
+		build = (AbstractBuild<?, ?>) r;
 	}
 
 	public void setResult(ResultWithDiagnostic<byte[]> resultDiagnostic) {

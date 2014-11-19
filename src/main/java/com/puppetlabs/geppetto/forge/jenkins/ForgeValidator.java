@@ -32,7 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +49,6 @@ import org.kohsuke.stapler.QueryParameter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.SerializableString;
-import com.fasterxml.jackson.core.io.CharacterEscapes;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -62,6 +60,8 @@ import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.diagnostic.DiagnosticType;
 import com.puppetlabs.geppetto.forge.jenkins.ModuleValidationAdvisor.ModuleValidationAdvisorDescriptor;
 import com.puppetlabs.geppetto.forge.jenkins.PPProblemsAdvisor.ProblemsAdvisorDescriptor;
+import com.puppetlabs.geppetto.forge.model.ForgeDocs;
+import com.puppetlabs.geppetto.forge.model.ForgeResult;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.pp.dsl.target.PuppetTarget;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
@@ -171,29 +171,6 @@ public class ForgeValidator extends Builder {
 		}
 	}
 
-	public static class HTMLEscapes extends CharacterEscapes {
-		private static final long serialVersionUID = 1L;
-
-		private static final int[] esc;
-		static {
-			esc = CharacterEscapes.standardAsciiEscapesForJSON();
-			esc['<'] = CharacterEscapes.ESCAPE_STANDARD;
-			esc['>'] = CharacterEscapes.ESCAPE_STANDARD;
-			esc['&'] = CharacterEscapes.ESCAPE_STANDARD;
-			esc['\''] = CharacterEscapes.ESCAPE_STANDARD;
-		}
-
-		@Override
-		public int[] getEscapeCodesForAscii() {
-			return esc;
-		}
-
-		@Override
-		public SerializableString getEscapeSequence(int ch) {
-			return null;
-		}
-	}
-
 	public static class VersionedNameSerializer extends JsonSerializer<VersionedName> {
 		@Override
 		public void serialize(VersionedName value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
@@ -211,6 +188,18 @@ public class ForgeValidator extends Builder {
 		for(ValidationPreference pref : ValidationPreference.values())
 			items.add(new hudson.util.ListBoxModel.Option(pref.toString(), pref.name()));
 		return new ListBoxModel(items);
+	}
+
+	public static ObjectMapper getMapper() {
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		mapper.enable(SerializationFeature.INDENT_OUTPUT);
+		SimpleModule module = new SimpleModule("Geppetto Custom Serializers");
+		VersionedNameSerializer vnSerializer = new VersionedNameSerializer();
+		module.addKeySerializer(VersionedName.class, vnSerializer);
+		module.addSerializer(VersionedName.class, vnSerializer);
+		mapper.registerModule(module);
+		return mapper;
 	}
 
 	static String[] parsePuppetLintOptions(String puppetLintOptions, boolean[] inverted) throws FormValidation {
@@ -276,7 +265,9 @@ public class ForgeValidator extends Builder {
 
 	private final boolean inverseOptions;
 
-	private final String jsonTypesPath;
+	private final boolean produceGraph;
+
+	private final String jsonDocsPath;
 
 	private final PPProblemsAdvisor problemsAdvisor;
 
@@ -296,12 +287,14 @@ public class ForgeValidator extends Builder {
 
 	private final ValidationImpact validationImpact;
 
+	private transient ForgeValidatorCallable callable;
+
 	@DataBoundConstructor
-	public ForgeValidator(String sourcePath, String jsonResultPath, String jsonTypesPath, String forgeServiceURL,
+	public ForgeValidator(String sourcePath, String jsonResultPath, String jsonDocsPath, String forgeServiceURL,
 			boolean ignoreFileOverride, String excludes, ComplianceLevel complianceLevel, ComplianceLevel maxComplianceLevel,
 			Boolean checkReferences, Boolean checkModuleSemantics, PPProblemsAdvisor problemsAdvisor,
 			ModuleValidationAdvisor moduleValidationAdvisor, ValidationPreference puppetLintMaxSeverity, String puppetLintOptions,
-			ValidationImpact validationImpact) throws FormValidation {
+			ValidationImpact validationImpact, boolean produceGraph) throws FormValidation {
 		this.sourcePath = sourcePath;
 		this.jsonResultPath = jsonResultPath;
 		this.forgeServiceURL = forgeServiceURL == null
@@ -325,8 +318,9 @@ public class ForgeValidator extends Builder {
 		boolean[] inverse = new boolean[1];
 		this.puppetLintOptions = parsePuppetLintOptions(puppetLintOptions, inverse);
 		inverseOptions = inverse[0];
-		this.jsonTypesPath = jsonTypesPath;
+		this.jsonDocsPath = jsonDocsPath;
 		this.validationImpact = validationImpact;
+		this.produceGraph = produceGraph;
 	}
 
 	private ComplianceLevel _maxComplianceLevel() {
@@ -378,11 +372,11 @@ public class ForgeValidator extends Builder {
 		return false;
 	}
 
-	private ForgeResult createForgeResult(ValidationResult data, Properties props) {
+	private ForgeResult createForgeResult(ValidationResult data, VersionedName moduleSlug, Properties props) {
 		ForgeResult forgeResult = new ForgeResult();
 		forgeResult.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
 		forgeResult.setVersion(format("%s-%s", props.getProperty("version"), props.getProperty("git.build.time")));
-		forgeResult.setRelease(data.getModuleSlug());
+		forgeResult.setRelease(moduleSlug);
 		Map<String, Object> resultMap = new HashMap<>();
 		for(Diagnostic diag : data.getUnfilteredLevelDiagnostics()) {
 			ComplianceDiagnostic cdiag = (ComplianceDiagnostic) diag;
@@ -393,6 +387,25 @@ public class ForgeValidator extends Builder {
 		}
 		forgeResult.setResults(resultMap);
 		return forgeResult;
+	}
+
+	private synchronized ForgeValidatorCallable getCallable(String sourceURI, String branch) {
+		if(callable == null) {
+			ComplianceLevel min = _minComplianceLevel();
+			ComplianceLevel max = _maxComplianceLevel();
+			if(max.ordinal() < min.ordinal()) {
+				ComplianceLevel x = min;
+				min = max;
+				max = x;
+			}
+			String docsPath = Strings.trimToNull(jsonDocsPath);
+
+			callable = new ForgeValidatorCallable(
+				forgeServiceURL, sourceURI, ignoreFileOverride, excludeGlobs, branch, min, max, checkReferences, checkModuleSemantics,
+				getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, inverseOptions,
+				puppetLintOptions, docsPath != null, produceGraph);
+		}
+		return callable;
 	}
 
 	public String getComplianceLevel() {
@@ -407,25 +420,12 @@ public class ForgeValidator extends Builder {
 		return forgeServiceURL;
 	}
 
+	public String getJsonDocsPath() {
+		return jsonDocsPath;
+	}
+
 	public String getJsonResultPath() {
 		return jsonResultPath;
-	}
-
-	public String getJsonTypesPath() {
-		return jsonTypesPath;
-	}
-
-	private ObjectMapper getMapper() {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		mapper.enable(SerializationFeature.INDENT_OUTPUT);
-		mapper.getFactory().setCharacterEscapes(new HTMLEscapes());
-		SimpleModule module = new SimpleModule("Geppetto Custom Serializers");
-		VersionedNameSerializer vnSerializer = new VersionedNameSerializer();
-		module.addKeySerializer(VersionedName.class, vnSerializer);
-		module.addSerializer(VersionedName.class, vnSerializer);
-		mapper.registerModule(module);
-		return mapper;
 	}
 
 	public String getMaxComplianceLevel() {
@@ -482,6 +482,10 @@ public class ForgeValidator extends Builder {
 		return ignoreFileOverride;
 	}
 
+	public boolean isProduceGraph() {
+		return produceGraph;
+	}
+
 	@Override
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
 		Properties props = readVersionProperties(listener);
@@ -521,19 +525,7 @@ public class ForgeValidator extends Builder {
 		if(sp != null)
 			moduleRoot = moduleRoot.child(sp);
 
-		ComplianceLevel min = _minComplianceLevel();
-		ComplianceLevel max = _maxComplianceLevel();
-		if(max.ordinal() < min.ordinal()) {
-			ComplianceLevel x = min;
-			min = max;
-			max = x;
-		}
-
-		String typesPath = Strings.trimToNull(jsonTypesPath);
-		ResultWithDiagnostic<byte[]> result = moduleRoot.act(new ForgeValidatorCallable(
-			forgeServiceURL, sourceURI, ignoreFileOverride, excludeGlobs, branch, min, max, checkReferences, checkModuleSemantics,
-			getProblemsAdvisor().getAdvisor(), getModuleValidationAdvisor().getAdvisor(), puppetLintMaxSeverity, inverseOptions,
-			puppetLintOptions, typesPath != null));
+		ResultWithDiagnostic<byte[]> result = moduleRoot.act(getCallable(sourceURI, branch));
 
 		// Emit non-validation diagnostics to the console
 		boolean[] otherErrors = new boolean[] { false };
@@ -543,22 +535,30 @@ public class ForgeValidator extends Builder {
 			return false;
 
 		ValidationResult data = new ValidationResult(build);
-		build.addAction(data);
 		data.setResult(result);
+		VersionedName moduleSlug = data.getModuleSlug();
 
 		String jp = Strings.trimToNull(jsonResultPath);
-		if(jp != null || typesPath != null) {
+		String dp = Strings.trimToNull(jsonDocsPath);
+		if(moduleSlug != null && (jp != null || dp != null)) {
 			ObjectMapper mapper = getMapper();
 			if(jp != null)
 				try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jp).write())) {
-					mapper.writeValue(out, createForgeResult(data, props));
+					mapper.writeValue(out, createForgeResult(data, moduleSlug, props));
 				}
-			if(typesPath != null)
-				try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(typesPath).write())) {
-					mapper.writerWithType(mapper.getTypeFactory().constructMapType(Map.class, VersionedName.class, Collection.class)).writeValue(
-						out, result.getExtractedTypes());
-				}
+			if(dp != null) {
+				ForgeDocs docs = result.getExtractedDocs().get(moduleSlug);
+				if(docs != null)
+					try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(dp).write())) {
+						mapper.writeValue(out, docs);
+					}
+			}
 		}
+
+		// Don't serialize this in the result
+		result.setExtractedDocs(Collections.<VersionedName, ForgeDocs> emptyMap());
+
+		build.addAction(data);
 		switch(_validationImpact()) {
 			case FAIL_ON_ALL:
 				return result.getSeverity() < Diagnostic.ERROR;

@@ -26,8 +26,8 @@
     <f:textbox default="${descriptor.jsonResultPath}"/>
   </f:entry>
 
-  <f:entry field="jsonTypesPath" title="${%Relative path to JSON types information}">
-    <f:textbox default="${descriptor.jsonTypesPath}"/>
+  <f:entry field="jsonDocsPath" title="${%Relative path to JSON types and function documentation}">
+    <f:textbox default="${descriptor.jsonDocsPath}"/>
   </f:entry>
 
   <f:entry field="excludeGlobs" title="${%Exclude Globs}">
@@ -58,8 +58,8 @@
     <f:checkbox default="true"/>
   </f:entry>
 
-  <f:entry field="extractTypes" title="${%Extract Type documentation}">
-    <f:checkbox default="true"/>
+  <f:entry field="produceGraph" title="${%Create a Dependency Graph}">
+    <f:checkbox default="false"/>
   </f:entry>
 
   <f:section title="Advanced Project Options">
