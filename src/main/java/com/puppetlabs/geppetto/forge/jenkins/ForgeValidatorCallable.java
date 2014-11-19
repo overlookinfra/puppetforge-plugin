@@ -308,10 +308,12 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 					Collection<NamedDocItem> functions = mi.getFunctions();
 					if(types.size() > 0 || functions.size() > 0) {
 						Metadata md = mi.getMetadata();
+						VersionedName release = new VersionedName(md.getName(), md.getVersion());
 						ForgeDocs fd = new ForgeDocs();
+						fd.setRelease(release);
 						fd.setFunctions(functions);
 						fd.setTypes(types);
-						extractedDocs.put(new VersionedName(md.getName(), md.getVersion()), fd);
+						extractedDocs.put(release, fd);
 					}
 				}
 			result.setExtractedDocs(extractedDocs);
