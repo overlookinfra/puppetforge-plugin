@@ -55,6 +55,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestBuilder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.puppetlabs.geppetto.forge.model.ForgeDocs;
 import com.puppetlabs.geppetto.forge.model.ForgeResult;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
 import com.puppetlabs.geppetto.pp.dsl.validation.IValidationAdvisor.ComplianceLevel;
@@ -80,7 +81,7 @@ public class ValidationTest {
 			return new ForgeValidator(
 				"",
 				"target/result.json",
-				"target/types.json",
+				"target/docs.json",
 				"https://forgestagingapi.puppetlabs.com",
 				false,
 				"",
@@ -158,6 +159,11 @@ public class ValidationTest {
 	}
 
 	@Test
+	public void handleConvertDiagnosticChildrenError() throws Exception {
+		validateTarball(getTarballFile(new VersionedName("maestrodev", "rvm", "1.7.0")));
+	}
+
+	@Test
 	public void handleLinksAppointingParentDirectory() throws Exception {
 		validateTarball(getTarballFile(new VersionedName("emyl", "vagrant", "0.1.0")));
 	}
@@ -220,6 +226,16 @@ public class ValidationTest {
 						bld.append(buf, 0, cnt);
 				}
 				fail(bld.toString());
+			}
+			try (InputStream in = new BufferedInputStream(build.getWorkspace().child("target/docs.json").read())) {
+				ObjectMapper mapper = ForgeValidator.getMapper();
+				ForgeDocs docs = mapper.readValue(in, ForgeDocs.class);
+				assertNotNull("Should contain a release slug", docs.getRelease());
+				assertNotNull("Should always produce a types collection", docs.getTypes());
+				assertNotNull("Should always produce a functions collection", docs.getFunctions());
+			}
+			catch(FileNotFoundException e) {
+				fail("Should emit a docs.json file");
 			}
 			long now = System.currentTimeMillis();
 			long duration = now - start;

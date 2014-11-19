@@ -548,14 +548,16 @@ public class ForgeValidator extends Builder {
 				}
 			if(dp != null) {
 				ForgeDocs docs = result.getExtractedDocs().get(moduleSlug);
-				if(docs != null) {
-					docs.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
-					docs.setVersion(format("%s-%s", props.getProperty("version"), props.getProperty("git.build.time")));
-					if(docs != null)
-						try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(dp).write())) {
-							mapper.writeValue(out, docs);
-						}
+				if(docs == null) {
+					docs = new ForgeDocs();
+					docs.setRelease(moduleSlug);
 				}
+				docs.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
+				docs.setVersion(format("%s-%s", props.getProperty("version"), props.getProperty("git.build.time")));
+				if(docs != null)
+					try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(dp).write())) {
+						mapper.writeValue(out, docs);
+					}
 			}
 		}
 

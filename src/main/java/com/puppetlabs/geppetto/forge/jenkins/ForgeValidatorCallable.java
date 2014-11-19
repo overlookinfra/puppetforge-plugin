@@ -34,6 +34,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.inject.Guice;
@@ -162,13 +163,22 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	private void convertChildren(Diagnostic diag) {
 		List<Diagnostic> children = diag.getChildren();
 		int idx = children.size();
+		if(idx == 0)
+			return;
+
+		boolean replace = false;
+		List<Diagnostic> newChildren = Lists.newArrayList(children);
 		while(--idx >= 0) {
 			Diagnostic child = children.get(idx);
-			if(child instanceof FileDiagnostic)
-				children.set(idx, convertFileDiagnostic((FileDiagnostic) child));
+			if(child instanceof FileDiagnostic) {
+				replace = true;
+				newChildren.set(idx, convertFileDiagnostic((FileDiagnostic) child));
+			}
 			else
 				convertChildren(child);
 		}
+		if(replace)
+			diag.setChildren(newChildren);
 	}
 
 	private Diagnostic convertFileDiagnostic(FileDiagnostic fd) {
