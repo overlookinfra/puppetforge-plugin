@@ -110,8 +110,7 @@
 				<groupId>org.jenkins-ci.tools</groupId>
 				<artifactId>maven-hpi-plugin</artifactId>
 				<configuration>
-					<pluginFirstClassLoader>true</pluginFirstClassLoader>
-					<globalMaskClasses>org.apache.log4j.</globalMaskClasses>
+					<maskClasses>org.apache.log4j. com.google.inject.</maskClasses>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -218,12 +217,6 @@
 			<groupId>com.puppetlabs.geppetto</groupId>
 			<artifactId>com.puppetlabs.geppetto.pp.dsl</artifactId>
 			<version>${geppetto.version}</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>org.apache.log4j</artifactId>
-					<groupId>org.apache.log4j</groupId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.puppetlabs.geppetto</groupId>
@@ -238,7 +231,7 @@
 		<dependency>
 			<groupId>com.puppetlabs.graph</groupId>
 			<artifactId>com.puppetlabs.graph</artifactId>
-			<version>1.0.3</version>
+			<version>1.0.4-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jenkins-ci.plugins</groupId>
@@ -312,11 +305,6 @@
 			<artifactId>guice</artifactId>
 			<version>4.0-beta5</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.17</version>
 		</dependency>
 	</dependencies>
 </project>
