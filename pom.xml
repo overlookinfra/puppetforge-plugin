@@ -110,7 +110,7 @@
 				<groupId>org.jenkins-ci.tools</groupId>
 				<artifactId>maven-hpi-plugin</artifactId>
 				<configuration>
-					<maskClasses>org.apache.log4j. com.google.inject.</maskClasses>
+					<maskClasses>org.apache.log4j. com.google. antlr. org.antlr. org.aopalliance. org.eclipse. com.puppetlabs.</maskClasses>
 				</configuration>
 			</plugin>
 			<plugin>

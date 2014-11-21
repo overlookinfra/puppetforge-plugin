@@ -20,13 +20,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.forge.Forge;
 import com.puppetlabs.geppetto.forge.impl.ForgeModule;
 import com.puppetlabs.geppetto.forge.model.Metadata;
+// import org.jenkinsci.remoting.RoleChecker;
+import com.google.inject.Guice;
 
 public abstract class ForgeCallable<T> implements FileCallable<T> {
 	private static final long serialVersionUID = -3048930993120683688L;
@@ -65,6 +66,10 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		modules.add(getCommonModule());
 	}
 
+	//	@Override
+	//	public void checkRoles(RoleChecker checker) throws SecurityException {
+	//	}
+	//
 	protected Injector createInjector(List<Module> modules) {
 		return Guice.createInjector(modules);
 	}
