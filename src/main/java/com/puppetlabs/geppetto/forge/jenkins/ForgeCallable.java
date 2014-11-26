@@ -10,24 +10,19 @@
  */
 package com.puppetlabs.geppetto.forge.jenkins;
 
-import static com.puppetlabs.geppetto.injectable.CommonModuleProvider.getCommonModule;
 import hudson.FilePath.FileCallable;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
-import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
 import com.puppetlabs.geppetto.forge.Forge;
-import com.puppetlabs.geppetto.forge.impl.ForgeModule;
 import com.puppetlabs.geppetto.forge.model.Metadata;
+import com.puppetlabs.geppetto.forge.util.ForgeStandaloneSetup;
+
 // import org.jenkinsci.remoting.RoleChecker;
-import com.google.inject.Guice;
 
 public abstract class ForgeCallable<T> implements FileCallable<T> {
 	private static final long serialVersionUID = -3048930993120683688L;
@@ -45,7 +40,7 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 
 	private transient File buildDir;
 
-	private transient Injector injector;
+	private transient ForgeStandaloneSetup forgeBindings;
 
 	private transient File sourceDir;
 
@@ -61,18 +56,11 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 		this.branchName = branchName;
 	}
 
-	protected void addModules(Diagnostic diagnostic, List<Module> modules) {
-		modules.add(new ForgeModule());
-		modules.add(getCommonModule());
-	}
-
 	//	@Override
 	//	public void checkRoles(RoleChecker checker) throws SecurityException {
 	//	}
 	//
-	protected Injector createInjector(List<Module> modules) {
-		return Guice.createInjector(modules);
-	}
+	protected abstract ForgeStandaloneSetup createForgeBindings();
 
 	protected Collection<File> findModuleRoots(Diagnostic diag) {
 		return getForge(diag).findModuleRoots(getSourceDir(), null);
@@ -87,18 +75,13 @@ public abstract class ForgeCallable<T> implements FileCallable<T> {
 	}
 
 	protected Forge getForge(Diagnostic diag) {
-		return getInjector(diag).getInstance(Forge.class);
+		return getForgeBindings().getInstance(Forge.class, diag);
 	}
 
-	synchronized Injector getInjector(Diagnostic diag) {
-		if(injector == null) {
-			List<Module> modules = new ArrayList<Module>();
-			addModules(diag, modules);
-			if(diag.getSeverity() <= Diagnostic.WARNING) {
-				injector = createInjector(modules);
-			}
-		}
-		return injector;
+	protected synchronized ForgeStandaloneSetup getForgeBindings() {
+		if(forgeBindings == null)
+			forgeBindings = createForgeBindings();
+		return forgeBindings;
 	}
 
 	protected Metadata getModuleMetadata(File moduleDirectory, Diagnostic diag) throws IOException {

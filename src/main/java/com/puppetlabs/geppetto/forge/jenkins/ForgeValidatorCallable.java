@@ -37,9 +37,6 @@ import org.eclipse.emf.common.util.URI;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Module;
 import com.puppetlabs.geppetto.common.os.FileUtils;
 import com.puppetlabs.geppetto.common.os.StreamUtil.OpenBAStream;
 import com.puppetlabs.geppetto.diagnostic.Diagnostic;
@@ -51,13 +48,11 @@ import com.puppetlabs.geppetto.forge.model.ModuleName;
 import com.puppetlabs.geppetto.forge.model.NamedDocItem;
 import com.puppetlabs.geppetto.forge.model.Type;
 import com.puppetlabs.geppetto.forge.model.VersionedName;
+import com.puppetlabs.geppetto.forge.util.ForgeStandaloneSetup;
 import com.puppetlabs.geppetto.graph.DependencyGraphProducer;
-import com.puppetlabs.geppetto.graph.GithubURLHrefProducer;
-import com.puppetlabs.geppetto.graph.IHrefProducer;
+import com.puppetlabs.geppetto.graph.ForgeValidationStandaloneSetup;
 import com.puppetlabs.geppetto.graph.ProgressMonitorCancelIndicator;
-import com.puppetlabs.geppetto.graph.RelativeFileHrefProducer;
 import com.puppetlabs.geppetto.graph.SVGProducer;
-import com.puppetlabs.geppetto.graph.dependency.DependencyGraphModule;
 import com.puppetlabs.geppetto.module.dsl.validation.IModuleValidationAdvisor;
 import com.puppetlabs.geppetto.module.dsl.validation.ModuleValidationAdvisorBean;
 import com.puppetlabs.geppetto.pp.dsl.validation.IPotentialProblemsAdvisor;
@@ -69,21 +64,28 @@ import com.puppetlabs.geppetto.puppetlint.PuppetLintService;
 import com.puppetlabs.geppetto.validation.FileType;
 import com.puppetlabs.geppetto.validation.ValidationOptions;
 import com.puppetlabs.geppetto.validation.ValidationService;
-import com.puppetlabs.geppetto.validation.impl.ValidationModule;
 import com.puppetlabs.geppetto.validation.runner.BuildResult;
 import com.puppetlabs.geppetto.validation.runner.IEncodingProvider;
 import com.puppetlabs.geppetto.validation.runner.MetadataInfo;
-import com.puppetlabs.geppetto.validation.runner.PPDiagnosticsSetup;
 import com.puppetlabs.graph.ICancel;
 
-public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagnostic<byte[]>> {
-	private static final long serialVersionUID = 1L;
+public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<byte[]>> {
+	public static class UTF8EncodingProvider implements IEncodingProvider {
+		private static final Charset UTF_8 = Charset.forName("UTF-8");
 
-	private static final Charset UTF_8 = Charset.forName("UTF-8");
+		@Override
+		public String getEncoding(URI arg0) {
+			return UTF_8.name();
+		}
+	}
+
+	private static final long serialVersionUID = 1L;
 
 	private static final Pattern GITHUB_REPO_URL_PATTERN = Pattern.compile("github.com[/:]([^/\\s]+)/([^/\\s]+)\\.git$");
 
 	static final String IMPORTED_MODULES_ROOT = "importedModules";
+
+	private String forgeServiceURL;
 
 	private transient String sourceHrefPrefix;
 
@@ -121,7 +123,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			boolean checkModuleSemantics, IPotentialProblemsAdvisor problemsAdvisor, IModuleValidationAdvisor moduleValidationAdvisor,
 			ValidationPreference puppetLintMaxSeverity, boolean puppetLintInverseOptions, String[] puppetLintOptions, boolean extractDocs,
 			boolean produceGraph) {
-		super(forgeServiceURL, sourceURI, branchName);
+		super(sourceURI, branchName);
+		this.forgeServiceURL = forgeServiceURL;
 		this.excludes = excludes;
 		this.minComplianceLevel = minComplianceLevel;
 		this.maxComplianceLevel = maxComplianceLevel;
@@ -147,17 +150,6 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 		result.setResult(svg);
 		convertChildren(geppettoDiag);
 		result.addChildren(geppettoDiag.getChildren());
-	}
-
-	@Override
-	protected void addModules(Diagnostic diagnostic, List<Module> modules) {
-		super.addModules(diagnostic, modules);
-		modules.add(new ValidationModule());
-		String repoHrefPrefix = getSourceHrefPrefix();
-		Class<? extends IHrefProducer> hrefProducerClass = repoHrefPrefix == null
-			? RelativeFileHrefProducer.class
-			: GithubURLHrefProducer.class;
-		modules.add(new DependencyGraphModule(hrefProducerClass, repoHrefPrefix));
 	}
 
 	private void convertChildren(Diagnostic diag) {
@@ -194,13 +186,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	}
 
 	@Override
-	protected Injector createInjector(final List<Module> modules) {
-		return new PPDiagnosticsSetup() {
-			@Override
-			public Injector createInjector() {
-				return Guice.createInjector(modules);
-			}
-		}.createInjectorAndDoEMFRegistration();
+	protected ForgeStandaloneSetup createForgeBindings() {
+		return new ForgeValidationStandaloneSetup(forgeServiceURL, getSourceHrefPrefix());
 	}
 
 	private ValidationOptions geppettoValidation(Collection<File> moduleLocations, ResultWithDiagnostic<byte[]> result) throws IOException {
@@ -227,7 +214,8 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 
 		if(checkReferences) {
 			File importedModulesDir = new File(getBuildDir(), IMPORTED_MODULES_ROOT);
-			importedModuleLocations = getForgeService(geppettoDiag).downloadDependencies(metadatas, importedModulesDir, geppettoDiag);
+			importedModuleLocations = getForgeBindings().getForgeService(geppettoDiag).downloadDependencies(
+				metadatas, importedModulesDir, geppettoDiag);
 		}
 		if(importedModuleLocations == null)
 			importedModuleLocations = Collections.emptyList();
@@ -332,7 +320,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	}
 
 	public DependencyGraphProducer getGraphProducer(Diagnostic diag) {
-		return getInjector(diag).getInstance(DependencyGraphProducer.class);
+		return getForgeBindings().getInstance(DependencyGraphProducer.class, diag);
 	}
 
 	private String getRelativePath(File file) {
@@ -391,7 +379,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	}
 
 	public SVGProducer getSVGProducer(Diagnostic diag) {
-		return getInjector(diag).getInstance(SVGProducer.class);
+		return getForgeBindings().getInstance(SVGProducer.class, diag);
 	}
 
 	private ValidationOptions getValidationOptions(ComplianceLevel complianceLevel, Collection<File> moduleLocations,
@@ -409,13 +397,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 			options.setFileType(FileType.PUPPET_ROOT);
 
 		options.setComplianceLevel(complianceLevel);
-		options.setEncodingProvider(new IEncodingProvider() {
-			@Override
-			public String getEncoding(URI file) {
-				return UTF_8.name();
-			}
-		});
-
+		options.setEncodingProvider(new UTF8EncodingProvider());
 		options.setValidationFilter(new FileFilter() {
 			@Override
 			public boolean accept(File file) {
@@ -435,7 +417,7 @@ public class ForgeValidatorCallable extends ForgeServiceCallable<ResultWithDiagn
 	}
 
 	ValidationService getValidationService(Diagnostic diag) {
-		return getInjector(diag).getInstance(ValidationService.class);
+		return getForgeBindings().getInstance(ValidationService.class, diag);
 	}
 
 	@Override
