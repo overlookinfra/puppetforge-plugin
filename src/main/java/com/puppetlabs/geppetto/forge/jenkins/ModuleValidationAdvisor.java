@@ -40,6 +40,10 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 			return doFillValidationPreferenceItems();
 		}
 
+		public ListBoxModel doFillDependencyDeclaredMoreThanOnceItems() {
+			return doFillValidationPreferenceItems();
+		}
+
 		public ListBoxModel doFillDependencyVersionMismatchItems() {
 			return doFillValidationPreferenceItems();
 		}
@@ -109,14 +113,15 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 	}
 
 	@DataBoundConstructor
-	public ModuleValidationAdvisor(ValidationPreference circularDependency, ValidationPreference dependencyVersionMismatch,
-			ValidationPreference deprecatedKey, ValidationPreference missingForgeRequiredFields,
-			ValidationPreference moduleClassNotInInitPP, ValidationPreference moduleNameNotStrict, ValidationPreference moduleRedefinition,
-			ValidationPreference modulefileExists, ValidationPreference modulefileExistsAndIsUsed,
-			ValidationPreference unexpectedSubmodule, ValidationPreference unrecognizedKey, ValidationPreference unresolvedReference,
-			ValidationPreference whitespaceInTag) {
+	public ModuleValidationAdvisor(ValidationPreference circularDependency, ValidationPreference dependencyDeclaredMoreThanOnce,
+			ValidationPreference dependencyVersionMismatch, ValidationPreference deprecatedKey,
+			ValidationPreference missingForgeRequiredFields, ValidationPreference moduleClassNotInInitPP,
+			ValidationPreference moduleNameNotStrict, ValidationPreference moduleRedefinition, ValidationPreference modulefileExists,
+			ValidationPreference modulefileExistsAndIsUsed, ValidationPreference unexpectedSubmodule, ValidationPreference unrecognizedKey,
+			ValidationPreference unresolvedReference, ValidationPreference whitespaceInTag) {
 		ModuleValidationAdvisorBean a = new ModuleValidationAdvisorBean();
 		a.setCircularDependency(circularDependency);
+		a.setDependencyDeclaredMoreThanOnce(dependencyDeclaredMoreThanOnce);
 		a.setDependencyVersionMismatch(dependencyVersionMismatch);
 		a.setDeprecatedKey(deprecatedKey);
 		a.setMissingForgeRequiredFields(missingForgeRequiredFields);
@@ -141,6 +146,13 @@ public class ModuleValidationAdvisor extends AbstractDescribableImpl<ModuleValid
 	 */
 	public String getCircularDependency() {
 		return advisor.getCircularDependency().name();
+	}
+
+	/**
+	 * @return the dependencyDeclaredMoreThanOnce
+	 */
+	public String getDependencyDeclaredMoreThanOnce() {
+		return advisor.getDependencyDeclaredMoreThanOnce().name();
 	}
 
 	/**
