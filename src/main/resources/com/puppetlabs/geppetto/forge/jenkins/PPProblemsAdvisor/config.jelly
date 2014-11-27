@@ -34,6 +34,9 @@
   <f:entry field="dqStringNotRequiredVariable" title="${%dqStringNotRequiredVariable}">
     <f:select default="${descriptor.defaults.dqStringNotRequiredVariable}"/>
   </f:entry>
+  <f:entry field="duplicateParameter" title="${%duplicateParameter}">
+    <f:select default="${descriptor.defaults.duplicateParameter}"/>
+  </f:entry>
   <f:entry field="ensureShouldAppearFirstInResource" title="${%ensureShouldAppearFirstInResource}">
     <f:select default="${descriptor.defaults.ensureShouldAppearFirstInResource}"/>
   </f:entry>

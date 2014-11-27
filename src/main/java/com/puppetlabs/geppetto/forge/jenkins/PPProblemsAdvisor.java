@@ -80,6 +80,10 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			return doFillValidationPreferenceItems();
 		}
 
+		public ListBoxModel doFillDuplicateParameterItems() {
+			return doFillValidationPreferenceItems();
+		}
+
 		public ListBoxModel doFillEnsureShouldAppearFirstInResourceItems() {
 			return doFillValidationPreferenceItems();
 		}
@@ -142,17 +146,17 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 			ValidationPreference caseDefaultShouldAppearLast, ValidationPreference deprecatedImport,
 			ValidationPreference deprecatedNodeInheritance, ValidationPreference deprecatedPlusEquals,
 			ValidationPreference deprecatedVariableName, ValidationPreference dqStringNotRequired,
-			ValidationPreference dqStringNotRequiredVariable, ValidationPreference ensureShouldAppearFirstInResource,
-			ValidationPreference interpolatedNonBraceEnclosedHyphens, ValidationPreference missingDefaultInSelector,
-			ValidationPreference mlComments, ValidationPreference rightToLeftRelationships,
+			ValidationPreference dqStringNotRequiredVariable, ValidationPreference duplicateParameter,
+			ValidationPreference ensureShouldAppearFirstInResource, ValidationPreference interpolatedNonBraceEnclosedHyphens,
+			ValidationPreference missingDefaultInSelector, ValidationPreference mlComments, ValidationPreference rightToLeftRelationships,
 			ValidationPreference selectorDefaultShouldAppearLast, ValidationPreference unbracedInterpolation,
 			ValidationPreference unquotedResourceTitles, ValidationPreference validityAssertedAtRuntime) {
 		this.advisor = new PotentialProblemsAdvisorBean(
 			assignmentToVarNamedString, assignmentToVarNamedTrusted, attributeIsNotString, booleansInStringForm,
 			caseDefaultShouldAppearLast, deprecatedImport, deprecatedNodeInheritance, deprecatedPlusEquals, deprecatedVariableName,
-			dqStringNotRequired, dqStringNotRequiredVariable, ensureShouldAppearFirstInResource, interpolatedNonBraceEnclosedHyphens,
-			missingDefaultInSelector, mlComments, selectorDefaultShouldAppearLast, unbracedInterpolation, unquotedResourceTitles,
-			validityAssertedAtRuntime, rightToLeftRelationships);
+			dqStringNotRequired, dqStringNotRequiredVariable, duplicateParameter, ensureShouldAppearFirstInResource,
+			interpolatedNonBraceEnclosedHyphens, missingDefaultInSelector, mlComments, selectorDefaultShouldAppearLast,
+			unbracedInterpolation, unquotedResourceTitles, validityAssertedAtRuntime, rightToLeftRelationships);
 	}
 
 	public IPotentialProblemsAdvisor getAdvisor() {
@@ -234,6 +238,13 @@ public class PPProblemsAdvisor extends AbstractDescribableImpl<PPProblemsAdvisor
 	 */
 	public String getDqStringNotRequiredVariable() {
 		return advisor.getDqStringNotRequiredVariable().name();
+	}
+
+	/**
+	 * @return the duplicateParameter
+	 */
+	public String getDuplicateParameter() {
+		return advisor.getDuplicateParameter().name();
 	}
 
 	/**

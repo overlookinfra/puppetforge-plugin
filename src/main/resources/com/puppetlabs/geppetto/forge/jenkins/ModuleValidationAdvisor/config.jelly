@@ -4,6 +4,9 @@
   <f:entry field="circularDependency" title="${%Circular module dependencies}">
     <f:select default="${descriptor.defaults.circularDependency}"/>
   </f:entry>
+  <f:entry field="dependencyDeclaredMoreThanOnce" title="${%Dependency declared more than once}">
+    <f:select default="${descriptor.defaults.dependencyDeclaredMoreThanOnce}"/>
+  </f:entry>
   <f:entry field="dependencyVersionMismatch" title="${%Dependency Version Mismatch}">
     <f:select default="${descriptor.defaults.dependencyVersionMismatch}"/>
   </f:entry>
