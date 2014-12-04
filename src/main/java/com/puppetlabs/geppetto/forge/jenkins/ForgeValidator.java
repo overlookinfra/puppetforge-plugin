@@ -86,10 +86,14 @@ public class ForgeValidator extends Builder {
 		}
 
 		public FormValidation doCheckJsonResultPath(@QueryParameter String value) throws IOException, ServletException {
+			if("-".equals(value))
+				return FormValidation.ok();
 			return checkRelativePath(value);
 		}
 
 		public FormValidation doCheckJsonTypesPath(@QueryParameter String value) throws IOException, ServletException {
+			if("-".equals(value))
+				return FormValidation.ok();
 			return checkRelativePath(value);
 		}
 
@@ -542,10 +546,15 @@ public class ForgeValidator extends Builder {
 		String dp = Strings.trimToNull(jsonDocsPath);
 		if(moduleSlug != null && (jp != null || dp != null)) {
 			ObjectMapper mapper = getMapper();
-			if(jp != null)
-				try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jp).write())) {
-					mapper.writeValue(out, createForgeResult(data, moduleSlug, props));
-				}
+			if(jp != null) {
+				ForgeResult fr = createForgeResult(data, moduleSlug, props);
+				if("-".equals(jp))
+					mapper.writeValue(listener.getLogger(), fr);
+				else
+					try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(jp).write())) {
+						mapper.writeValue(out, fr);
+					}
+			}
 			if(dp != null) {
 				ForgeDocs docs = result.getExtractedDocs().get(moduleSlug);
 				if(docs == null) {
@@ -554,7 +563,9 @@ public class ForgeValidator extends Builder {
 				}
 				docs.setName(format("%s.%s", props.getProperty("groupId"), props.getProperty("artifactId")));
 				docs.setVersion(format("%s-%s", props.getProperty("version"), props.getProperty("git.build.time")));
-				if(docs != null)
+				if("-".equals(dp))
+					mapper.writeValue(listener.getLogger(), docs);
+				else
 					try (OutputStream out = new BufferedOutputStream(build.getWorkspace().child(dp).write())) {
 						mapper.writeValue(out, docs);
 					}
