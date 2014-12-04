@@ -227,6 +227,8 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 		BuildResult bestResult = null;
 
 		Diagnostic levelDiags = new Diagnostic();
+		int maxErrors = Integer.MAX_VALUE;
+		int maxWarnings = Integer.MAX_VALUE;
 		for(ComplianceLevel level : ComplianceLevel.values()) {
 			if(level.ordinal() < minComplianceLevel.ordinal())
 				continue;
@@ -239,47 +241,24 @@ public class ForgeValidatorCallable extends ForgeCallable<ResultWithDiagnostic<b
 			BuildResult buildResult = getValidationService(levelDiag).validate(
 				levelDiag, options, getSourceDir(), new NullProgressMonitor());
 
-			if(bestResult == null || levelDiags.getChildren().isEmpty() || levelDiag.getSeverity() < levelDiags.getSeverity()) {
+			int errors = 0;
+			int warnings = 0;
+			for(Diagnostic d : levelDiag) {
+				switch(d.getSeverity()) {
+					case Diagnostic.ERROR:
+						++errors;
+						break;
+					case Diagnostic.WARNING:
+						++warnings;
+				}
+			}
+
+			if(bestResult == null || (errors < maxErrors || errors == maxErrors && warnings <= maxWarnings)) {
 				bestDiag = levelDiag;
 				bestOptions = options;
 				bestResult = buildResult;
-			}
-			else {
-				int maxErrors = 0;
-				int maxWarnings = 0;
-				for(Diagnostic ld : levelDiags) {
-					int errors = 0;
-					int warnings = 0;
-					for(Diagnostic d : ld) {
-						switch(d.getSeverity()) {
-							case Diagnostic.ERROR:
-								++errors;
-								break;
-							case Diagnostic.WARNING:
-								++warnings;
-						}
-					}
-					if(errors > maxErrors)
-						maxErrors = errors;
-					if(warnings > maxWarnings)
-						maxWarnings = warnings;
-				}
-				int errors = 0;
-				int warnings = 0;
-				for(Diagnostic d : levelDiag) {
-					switch(d.getSeverity()) {
-						case Diagnostic.ERROR:
-							++errors;
-							break;
-						case Diagnostic.WARNING:
-							++warnings;
-					}
-				}
-				if(errors < maxErrors || errors == maxErrors && warnings <= maxWarnings) {
-					bestDiag = levelDiag;
-					bestOptions = options;
-					bestResult = buildResult;
-				}
+				maxErrors = errors;
+				maxWarnings = warnings;
 			}
 			levelDiags.addChild(levelDiag);
 		}
