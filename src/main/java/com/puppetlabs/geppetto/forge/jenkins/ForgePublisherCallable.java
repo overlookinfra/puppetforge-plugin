@@ -57,7 +57,15 @@ public class ForgePublisherCallable extends ForgeCallable<Diagnostic> {
 	@Override
 	protected Diagnostic invoke(VirtualChannel channel) throws IOException, InterruptedException {
 		Diagnostic result = new Diagnostic();
-		Collection<File> moduleRoots = findModuleRoots(result);
+		Forge forge = getForge(result);
+		FileFilter fileFilter = new FileFilter() {
+			@Override
+			public boolean accept(File file) {
+				return FileUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
+			}
+		};
+
+		Collection<File> moduleRoots = forge.findModuleRoots(getSourceDir(), fileFilter);
 		if(moduleRoots.isEmpty()) {
 			result.addChild(new Diagnostic(Diagnostic.ERROR, Forge.PACKAGE, "No modules found in repository"));
 			return result;
@@ -71,15 +79,7 @@ public class ForgePublisherCallable extends ForgeCallable<Diagnostic> {
 			return result;
 		}
 
-		FileFilter fileFilter = new FileFilter() {
-			@Override
-			public boolean accept(File file) {
-				return FileUtils.DEFAULT_FILE_FILTER.accept(file) && !isParentOrEqual(getBuildDir(), file);
-			}
-		};
-
 		List<File> tarBalls = new ArrayList<File>();
-		Forge forge = getForge(result);
 		for(File moduleRoot : moduleRoots) {
 			File tarBall = forge.build(moduleRoot, builtModules, fileFilter, null, null, result);
 			if(tarBall != null)
